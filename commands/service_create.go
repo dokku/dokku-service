@@ -3,6 +3,8 @@ package commands
 import (
 	"context"
 	"dokku-service/container"
+	"dokku-service/healthcheck"
+	"dokku-service/network"
 	"dokku-service/template"
 	"dokku-service/volume"
 	"encoding/json"
@@ -12,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/josegonzalez/cli-skeleton/command"
+	"github.com/moby/moby/client"
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
 
@@ -32,30 +35,48 @@ type RunConfig struct {
 	ContainerCreateFlags []string          `json:"container_create_flags"`
 	DataRoot             string            `json:"data_root"`
 	EnvironmentVariables map[string]string `json:"env"`
+	Image                RunImageConfig    `json:"image"`
 	ImageBuildFlags      []string          `json:"image_build_flags"`
 	ServiceRoot          string            `json:"service_root"`
 	UseVolumes           bool              `json:"use_volumes"`
 }
 
+type RunImageConfig struct {
+	Name string `json:"name"`
+	Tag  string `json:"tag"`
+}
+
 type ServiceCreateCommand struct {
 	command.Meta
 
-	// Context passed to the command
+	// Context specifies the context to use
 	Context context.Context
 
-	// Arguments to pass to the docker container via BUILD_ARGS
+	// arguments specifies the arguments to pass to the service
 	arguments map[string]string
 
-	// Flags to pass to the container create command
+	// containerCreateFlags specifies the flags to pass to the container create command
 	containerCreateFlags []string
 
-	// The root directory for service data
+	// dataRoot specifies the root directory for service data
 	dataRoot string
 
-	// Flags to pass to the image build command
+	// imageName specifies the name to use when building the image
+	imageName string
+
+	// imageTag specifies the tag to use when building the image
+	imageTag string
+
+	// imageBuildFlags specifies the flags to pass to the image build command
 	imageBuildFlags []string
 
-	// Use volumes instead of a directory on disk for data
+	// postCreateNetwork specifies the network to attach to the container after creation
+	postCreateNetwork []string
+
+	// postStartNetwork specifies the network to attach to the container after start
+	postStartNetwork []string
+
+	// useVolumes specifies whether to use volumes or directories for service data
 	useVolumes bool
 }
 
@@ -108,7 +129,11 @@ func (c *ServiceCreateCommand) FlagSet() *flag.FlagSet {
 	f.StringToStringVar(&c.arguments, "argument", map[string]string{}, "arguments to set when creating the service")
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
 	f.StringArrayVar(&c.containerCreateFlags, "container-create-flags", []string{}, "flags to pass to the container create command")
+	f.StringVar(&c.imageName, "image-name", "", "the name to use when building the image")
+	f.StringVar(&c.imageTag, "image-tag", "", "the tag to use when building the image")
 	f.StringArrayVar(&c.imageBuildFlags, "image-build-flags", []string{}, "flags to pass to the image build command")
+	f.StringSliceVar(&c.postCreateNetwork, "post-create-network", []string{}, "network to attach to the container after creation")
+	f.StringSliceVar(&c.postStartNetwork, "post-start-network", []string{}, "network to attach to the container after start")
 	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }
@@ -152,7 +177,14 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	containerName := fmt.Sprintf("dokku.%s.%s", entry.Name, serviceName)
+	containerName := container.Name(container.NameInput{
+		ServiceName: serviceName,
+		ServiceType: entry.Name,
+	})
+	networkAlias := network.Alias(network.AliasInput{
+		ServiceName: serviceName,
+		ServiceType: entry.Name,
+	})
 	ok, err = c.containerExists(containerName)
 	if err != nil {
 		c.Ui.Error("Failed to check for existing service: " + err.Error())
@@ -161,6 +193,30 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	if ok {
 		c.Ui.Error("Service container already exists")
 		return 2
+	}
+
+	// todo: improve logging
+	for _, networkName := range c.postCreateNetwork {
+		ok, err = network.Exists(c.Context, network.ExistsInput{Name: networkName})
+		if err != nil {
+			c.Ui.Error("Failed to check for network existence: " + err.Error())
+			return 1
+		}
+		if !ok {
+			c.Ui.Error(fmt.Sprintf("Missing post-create network: %s", networkName))
+			return 1
+		}
+	}
+
+	for _, networkName := range c.postStartNetwork {
+		ok, err = network.Exists(c.Context, network.ExistsInput{Name: networkName})
+		if err != nil {
+			c.Ui.Error("Failed to check for network existence: " + err.Error())
+		}
+		if !ok {
+			c.Ui.Error(fmt.Sprintf("Missing post-start network: %s", networkName))
+			return 1
+		}
 	}
 
 	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, entry.Name, serviceName)
@@ -185,13 +241,6 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	imageName := fmt.Sprintf("dokku/service-%s:latest", entry.Name)
-	logger.LogHeader2("Building base image from template")
-	if err := c.buildImage(imageName, containerArgs, entry); err != nil {
-		c.Ui.Error("Failed to build image for service: " + err.Error())
-		return 1
-	}
-
 	envFile := fmt.Sprintf("%s/.env", serviceRoot)
 	envLines := []string{}
 	envConfig := map[string]string{}
@@ -211,9 +260,13 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 			ContainerCreateFlags: c.containerCreateFlags,
 			DataRoot:             c.dataRoot,
 			EnvironmentVariables: envConfig,
-			ImageBuildFlags:      c.imageBuildFlags,
-			ServiceRoot:          serviceRoot,
-			UseVolumes:           c.useVolumes,
+			Image: RunImageConfig{
+				Name: c.imageName,
+				Tag:  c.imageTag,
+			},
+			ImageBuildFlags: c.imageBuildFlags,
+			ServiceRoot:     serviceRoot,
+			UseVolumes:      c.useVolumes,
 		},
 		Template: entry,
 	}
@@ -225,6 +278,29 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	if err := os.WriteFile(configFile, data, 0o666); err != nil {
 		c.Ui.Error("Failed to write create settings for service: " + err.Error())
+		return 1
+	}
+
+	// todo: refactor to force-set the IMAGE argument or drop completely
+	if c.imageName != "" {
+		entry.Image.Name = c.imageName
+	}
+	if c.imageTag != "" {
+		entry.Image.Tag = c.imageTag
+	}
+	containerArgs["IMAGE"] = argument.Argument{
+		Key:      "IMAGE",
+		Value:    fmt.Sprintf("%s:%s", entry.Image.Name, entry.Image.Tag),
+		Override: true,
+	}
+
+	imageName := image.Name(image.NameInput{
+		ServiceName: serviceName,
+		ServiceType: entry.Name,
+	})
+	logger.LogHeader2("Building base image from template")
+	if err := c.buildImage(imageName, containerArgs, entry); err != nil {
+		c.Ui.Error("Failed to build image for service: " + err.Error())
 		return 1
 	}
 
@@ -263,6 +339,18 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
+	logger.LogHeader2("Attaching container to post-create networks")
+	for _, networkName := range c.postCreateNetwork {
+		if err := network.Connect(c.Context, network.ConnectInput{
+			ContainerName: containerName,
+			NetworkAlias:  networkAlias,
+			NetworkName:   networkName,
+		}); err != nil {
+			c.Ui.Error("Failed to attach container to network: " + err.Error())
+			return 1
+		}
+	}
+
 	// todo: attach container to container-specific network
 	logger.LogHeader2("Executing post-create hook")
 	if err := c.executeHook("post-create", entry.Hooks.PostCreate, serviceName, createdVolumes, entry); err != nil {
@@ -276,7 +364,43 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	// todo: wait until container is ready
+	logger.LogHeader2("Waiting for service to be ready")
+	cli, err := client.NewClientWithOpts(
+		client.FromEnv,
+		client.WithAPIVersionNegotiation(),
+	)
+	if err != nil {
+		logger.Error(err.Error())
+		return 1
+	}
+
+	container, err := cli.ContainerInspect(context.Background(), containerName)
+	if err != nil {
+		logger.Error(err.Error())
+		return 1
+	}
+	if err := healthcheck.ListeningCheck(c.Context, healthcheck.ListeningCheckInput{
+		Container:    container,
+		NetworkAlias: networkAlias,
+		Timeout:      5,
+		Ports:        entry.Ports.Wait,
+		Wait:         1,
+	}); err != nil {
+		c.Ui.Error("Failed to wait for service to be ready: " + err.Error())
+		return 1
+	}
+
+	logger.LogHeader2("Attaching container to post-start networks")
+	for _, networkName := range c.postStartNetwork {
+		if err := network.Connect(c.Context, network.ConnectInput{
+			ContainerName: containerName,
+			NetworkAlias:  networkAlias,
+			NetworkName:   networkName,
+		}); err != nil {
+			c.Ui.Error("Failed to attach container to network: " + err.Error())
+			return 1
+		}
+	}
 
 	logger.LogHeader2("Executing post-start hook")
 	if err := c.executeHook("post-start", entry.Hooks.PostStart, serviceName, createdVolumes, entry); err != nil {

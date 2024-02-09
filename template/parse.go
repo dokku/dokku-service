@@ -38,7 +38,7 @@ type ServiceTemplate struct {
 	Hooks             ServiceHooks      `json:"hooks"`
 	ExportedVariables map[string]string `json:"exported_variables"`
 	Commands          map[string]string `json:"commands"`
-	Ports             map[string]int    `json:"ports"`
+	Ports             ServicePorts      `json:"ports"`
 	Volumes           []Volume          `json:"volumes"`
 }
 
@@ -52,6 +52,11 @@ type ServiceHooks struct {
 type ServiceImage struct {
 	Name string `json:"name"`
 	Tag  string `json:"tag"`
+}
+
+type ServicePorts struct {
+	Expose []int `json:"expose"`
+	Wait   []int `json:"wait"`
 }
 
 type Argument struct {
@@ -150,6 +155,35 @@ func ParseDockerfile(path string) (ServiceTemplate, error) {
 	if err != nil {
 		return ServiceTemplate{}, fmt.Errorf("invalid value for label label %s: %w", string(LABEL_CONFIG_HOOKS_POST_START), err)
 	}
+
+	waitPorts := []int{}
+	for _, port := range strings.Split(getLabelValueWithDefault(commands, LABEL_CONFIG_PORTS_WAIT, ""), ",") {
+		if port == "" {
+			continue
+		}
+
+		p, err := strconv.Atoi(port)
+		if err != nil {
+			return ServiceTemplate{}, fmt.Errorf("invalid value for label label %s: %w", string(LABEL_CONFIG_PORTS_WAIT), err)
+		}
+
+		waitPorts = append(waitPorts, p)
+	}
+
+	exposePorts := []int{}
+	for _, port := range strings.Split(getLabelValueWithDefault(commands, LABEL_CONFIG_PORTS_EXPOSE, ""), ",") {
+		if port == "" {
+			continue
+		}
+
+		p, err := strconv.Atoi(port)
+		if err != nil {
+			return ServiceTemplate{}, fmt.Errorf("invalid value for label label %s: %w", string(LABEL_CONFIG_PORTS_EXPOSE), err)
+		}
+
+		exposePorts = append(exposePorts, p)
+	}
+
 	template := ServiceTemplate{
 		Name:           name,
 		Image:          image,
@@ -157,6 +191,10 @@ func ParseDockerfile(path string) (ServiceTemplate, error) {
 		DockerfilePath: dockerfilePath,
 		Path:           path,
 		Arguments:      arguments,
+		Ports: ServicePorts{
+			Expose: exposePorts,
+			Wait:   waitPorts,
+		},
 		Hooks: ServiceHooks{
 			Image:      hookImage,
 			PreCreate:  preCreateHook,
