@@ -165,7 +165,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	envFile := fmt.Sprintf("%s/%s/%s/.env", c.dataRoot, entry.Name, serviceName)
+	envFile := fmt.Sprintf("%s/.env", serviceRoot)
 	envLines := []string{}
 	for _, argument := range containerArgs {
 		envLines = append(envLines, fmt.Sprintf(`%s=%s`, strings.TrimSuffix(argument.Key, "_SECRET"), argument.Value))
@@ -181,7 +181,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		"--env-file", envFile,
 		"--restart", "always",
 		"--hostname", containerName,
-		"--cidfile", fmt.Sprintf("%s/%s/%s/ID", c.dataRoot, entry.Name, serviceName),
+		"--cidfile", fmt.Sprintf("%s/ID", serviceRoot),
 	}
 	cmdArgs = append(cmdArgs, "--label", fmt.Sprintf("com.dokku.service-volumes=%s", strconv.FormatBool(c.useVolumes)))
 
@@ -326,6 +326,7 @@ func (c *ServiceCreateCommand) executeHook(hook string, hookExists bool, service
 		return fmt.Errorf("deriving absolute path to %s hook failed: %w", hook, err)
 	}
 
+	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, template.Name, serviceName)
 	cmdArgs := []string{
 		"container",
 		"run",
@@ -333,7 +334,7 @@ func (c *ServiceCreateCommand) executeHook(hook string, hookExists bool, service
 		"--volume",
 		fmt.Sprintf("%s:/usr/local/bin/hook", hookPath),
 		"--env-file",
-		fmt.Sprintf("%s/%s/%s/.env", c.dataRoot, template.Name, serviceName),
+		fmt.Sprintf("%s/.env", serviceRoot),
 	}
 
 	for _, volume := range volumes {
@@ -399,7 +400,8 @@ type Volume struct {
 
 func (c *ServiceCreateCommand) createVolume(serviceName string, template template.ServiceTemplate, volumeDescriptor template.Volume) (v Volume, err error) {
 	if !c.useVolumes {
-		source := fmt.Sprintf("%s/%s/%s/%s", c.dataRoot, template.Name, serviceName, volumeDescriptor.Alias)
+		serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, template.Name, serviceName)
+		source := fmt.Sprintf("%s/%s", serviceRoot, volumeDescriptor.Alias)
 		mountType := "bind"
 		if err := os.MkdirAll(filepath.Clean(source), os.ModePerm); err != nil {
 			return Volume{}, errors.New("could not create volume host dir")
