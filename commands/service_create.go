@@ -4,6 +4,7 @@ import (
 	"context"
 	"dokku-service/logstreamer"
 	"dokku-service/template"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -20,6 +21,11 @@ import (
 )
 
 const DATA_ROOT = "/tmp"
+
+type CreateConfig struct {
+	Arguments map[string]string `json:"arguments"`
+	DataRoot  string            `json:"data_root"`
+}
 
 type ServiceCreateCommand struct {
 	command.Meta
