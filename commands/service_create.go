@@ -444,12 +444,9 @@ func (c *ServiceCreateCommand) collectContainerArgs(template template.ServiceTem
 		}
 	}
 
-	for _, argument := range c.arguments {
-		parts := strings.SplitN(argument, "=", 2)
-		key := parts[0]
-		value := os.Getenv(key)
-		if len(parts) == 2 {
-			value = parts[1]
+	for key, value := range c.arguments {
+		if len(value) == 0 {
+			value = os.Getenv(key)
 		}
 
 		arguments[key] = Argument{
