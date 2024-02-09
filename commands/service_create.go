@@ -137,7 +137,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	imageName := fmt.Sprintf("dokku/service-%s:latest", entry.Name)
 	logger.LogHeader2("Building base image from template")
-	if c.buildImage(imageName, containerArgs, entry); err != nil {
+	if err := c.buildImage(imageName, containerArgs, entry); err != nil {
 		c.Ui.Error("Failed to build image for service: " + err.Error())
 		return 1
 	}
