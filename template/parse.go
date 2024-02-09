@@ -242,7 +242,7 @@ func validateLabel(command dockerfile.Command) error {
 	}
 
 	key := command.Value[0]
-	if _, ok := validLabels[Label(key)]; !ok && !strings.HasPrefix(key, "com.dokku.template.config.exported-variables.") {
+	if _, ok := validLabels[Label(key)]; !ok && !strings.HasPrefix(key, "com.dokku.template.config.variables.exported.") {
 		return fmt.Errorf("invalid label key: %s", key)
 	}
 
