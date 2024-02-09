@@ -23,6 +23,7 @@ const (
 	LABEL_CONFIG_HOOKS_IMAGE       Label = "com.dokku.template.config.hooks.image"
 	LABEL_CONFIG_HOOKS_PRE_CREATE  Label = "com.dokku.template.config.hooks.pre-create"
 	LABEL_CONFIG_HOOKS_POST_CREATE Label = "com.dokku.template.config.hooks.post-create"
+	LABEL_CONFIG_HOOKS_POST_START  Label = "com.dokku.template.config.hooks.post-start"
 	LABEL_CONFIG_PORTS_EXPOSE      Label = "com.dokku.template.config.ports.expose"
 	LABEL_CONFIG_PORTS_WAIT        Label = "com.dokku.template.config.ports.wait"
 )
@@ -44,6 +45,7 @@ type ServiceHooks struct {
 	Image      string `json:"image"`
 	PreCreate  bool   `json:"pre_create"`
 	PostCreate bool   `json:"post_create"`
+	PostStart  bool   `json:"post_start"`
 }
 
 type Argument struct {
@@ -127,6 +129,10 @@ func ParseDockerfile(path string) (ServiceTemplate, error) {
 		return ServiceTemplate{}, fmt.Errorf("invalid value for label label %s: %w", string(LABEL_CONFIG_HOOKS_POST_CREATE), err)
 	}
 
+	postStartHook, err := strconv.ParseBool(getLabelValueWithDefault(commands, LABEL_CONFIG_HOOKS_POST_START, "false"))
+	if err != nil {
+		return ServiceTemplate{}, fmt.Errorf("invalid value for label label %s: %w", string(LABEL_CONFIG_HOOKS_POST_START), err)
+	}
 	template := ServiceTemplate{
 		Name:           name,
 		Description:    description,
@@ -137,6 +143,7 @@ func ParseDockerfile(path string) (ServiceTemplate, error) {
 			Image:      hookImage,
 			PreCreate:  preCreateHook,
 			PostCreate: postCreateHook,
+			PostStart:  postStartHook,
 		},
 		Volumes: volumes,
 	}

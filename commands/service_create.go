@@ -241,9 +241,9 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		createdVolumes = append(createdVolumes, volume)
 	}
 
-	logger.LogHeader2("Running pre-create hook")
+	logger.LogHeader2("Executing pre-create hook")
 	if err := c.executeHook("pre-create", entry.Hooks.PreCreate, serviceName, createdVolumes, entry); err != nil {
-		c.Ui.Error("Failed to create container for service: " + err.Error())
+		c.Ui.Error("Failed to execute pre-create hook for service: " + err.Error())
 		return 1
 	}
 
@@ -264,9 +264,9 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	// todo: attach container to container-specific network
-	logger.LogHeader2("Running post-create hook")
+	logger.LogHeader2("Executing post-create hook")
 	if err := c.executeHook("post-create", entry.Hooks.PostCreate, serviceName, createdVolumes, entry); err != nil {
-		c.Ui.Error("Failed to create container for service: " + err.Error())
+		c.Ui.Error("Failed to execute post-create hook for service: " + err.Error())
 		return 1
 	}
 
@@ -277,6 +277,12 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	// todo: wait until container is ready
+
+	logger.LogHeader2("Executing post-start hook")
+	if err := c.executeHook("post-start", entry.Hooks.PostStart, serviceName, createdVolumes, entry); err != nil {
+		c.Ui.Error("Failed to execute post-start hook for service: " + err.Error())
+		return 1
+	}
 
 	return 0
 }
