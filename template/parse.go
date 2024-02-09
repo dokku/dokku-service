@@ -30,6 +30,7 @@ const (
 
 type ServiceTemplate struct {
 	Name              string            `json:"name"`
+	Image             ServiceImage      `json:"image"`
 	Path              string            `json:"path"`
 	DockerfilePath    string            `json:"dockerfile_path"`
 	Description       string            `json:"description"`
@@ -46,6 +47,11 @@ type ServiceHooks struct {
 	PreCreate  bool   `json:"pre_create"`
 	PostCreate bool   `json:"post_create"`
 	PostStart  bool   `json:"post_start"`
+}
+
+type ServiceImage struct {
+	Name string `json:"name"`
+	Tag  string `json:"tag"`
 }
 
 type Argument struct {
@@ -108,6 +114,17 @@ func ParseDockerfile(path string) (ServiceTemplate, error) {
 		}
 	}
 
+	image := ServiceImage{}
+	for _, argument := range arguments {
+		if argument.Name == "IMAGE" {
+			parts := strings.Split(argument.Value, ":")
+			image.Name = parts[0]
+			if len(parts) > 1 {
+				image.Tag = parts[1]
+			}
+		}
+	}
+
 	name, err := getLabelValue(commands, LABEL_NAME)
 	if err != nil {
 		return ServiceTemplate{}, fmt.Errorf("missing required label %s: %w", string(LABEL_NAME), err)
@@ -135,6 +152,7 @@ func ParseDockerfile(path string) (ServiceTemplate, error) {
 	}
 	template := ServiceTemplate{
 		Name:           name,
+		Image:          image,
 		Description:    description,
 		DockerfilePath: dockerfilePath,
 		Path:           path,
