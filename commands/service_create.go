@@ -141,6 +141,14 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		c.Ui.Error("Service directory already exists but container is not running")
 		return 3
 	}
+
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s", c.dataRoot, entry.Name), os.ModePerm); err != nil {
+		c.Ui.Error("Failed to create service directory: " + err.Error())
+		return 1
+	}
+
+	if err := os.MkdirAll(serviceRoot, os.ModePerm); err != nil {
+		c.Ui.Error("Failed to create service directory: " + err.Error())
 		return 1
 	}
 
