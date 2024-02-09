@@ -13,13 +13,22 @@ import (
 	"github.com/alexellis/go-execute/v2"
 )
 
+// BuildInput contains the input parameters for the Build function
 type BuildInput struct {
-	Arguments  map[string]argument.Argument
+	// Arguments specifies the arguments to use when building the image
+	Arguments map[string]argument.Argument
+
+	// BuildFlags specifies the flags to use when building the image
 	BuildFlags []string
-	Name       string
-	Template   template.ServiceTemplate
+
+	// Name of the image to build
+	Name string
+
+	// Template to use for building the image
+	Template template.ServiceTemplate
 }
 
+// Build builds a Docker image
 func Build(ctx context.Context, input BuildInput) error {
 	cmdArgs := []string{
 		"image", "build",

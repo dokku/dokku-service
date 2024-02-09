@@ -10,10 +10,13 @@ import (
 	"github.com/alexellis/go-execute/v2"
 )
 
+// StartInput contains the input parameters for the Start function
 type StartInput struct {
+	// Name of the container to start
 	Name string
 }
 
+// Start starts a container
 func Start(ctx context.Context, input StartInput) error {
 	var mu sync.Mutex
 	cmd := execute.ExecTask{

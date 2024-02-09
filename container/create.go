@@ -13,15 +13,29 @@ import (
 )
 
 type CreateInput struct {
-	CreateFlags   []string
+	// CreateFlags specifies the flags to use when creating the container
+	CreateFlags []string
+
+	// ContainerName specifies the name of the container to create
 	ContainerName string
-	EnvFile       string
-	ImageName     string
-	ServiceRoot   string
-	Volumes       []volume.Volume
-	UseVolumes    bool
+
+	// EnvFile specifies the file to use for environment variables
+	EnvFile string
+
+	// ImageName specifies the name of the image to use
+	ImageName string
+
+	// ServiceRoot specifies the root directory for the service
+	ServiceRoot string
+
+	// Volumes specifies the volumes to use
+	Volumes []volume.Volume
+
+	// UseVolumes specifies whether to use volumes
+	UseVolumes bool
 }
 
+// Create creates a container
 func Create(ctx context.Context, input CreateInput) error {
 	cmdArgs := []string{
 		"container", "create",

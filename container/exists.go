@@ -7,10 +7,13 @@ import (
 	"github.com/alexellis/go-execute/v2"
 )
 
+// ExistsInput contains the input parameters for the Exists function
 type ExistsInput struct {
+	// Name of the container to check for existence
 	Name string
 }
 
+// Exists checks if a container exists
 func Exists(ctx context.Context, input ExistsInput) (bool, error) {
 	cmd := execute.ExecTask{
 		Command: "docker",
@@ -24,7 +27,7 @@ func Exists(ctx context.Context, input ExistsInput) (bool, error) {
 	cmd.PrintCommand = true
 	res, err := cmd.Execute(ctx)
 	if err != nil {
-		return false, fmt.Errorf("check for service existence failed: %w", err)
+		return false, fmt.Errorf("check for container existence failed: %w", err)
 	}
 
 	if res.ExitCode != 0 {
