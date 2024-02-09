@@ -132,7 +132,15 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 	if ok {
-		c.Ui.Error("Service already exists")
+		c.Ui.Error("Service container already exists")
+		return 2
+	}
+
+	serviceRoot := fmt.Sprintf("%s/%s/%s/config.json", c.dataRoot, entry.Name, serviceName)
+	if _, err := os.Stat(serviceRoot); err != nil && !errors.Is(err, os.ErrNotExist) {
+		c.Ui.Error("Service directory already exists but container is not running")
+		return 3
+	}
 		return 1
 	}
 
