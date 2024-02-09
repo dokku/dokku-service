@@ -175,6 +175,22 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
+	configFile := fmt.Sprintf("%s/config.json", serviceRoot)
+	createConfig := CreateConfig{
+		Arguments: c.arguments,
+		DataRoot:  c.dataRoot,
+	}
+	data, err := json.Marshal(createConfig)
+	if err != nil {
+		c.Ui.Error("Failed to marshal create settings for service: " + err.Error())
+		return 1
+	}
+
+	if err := os.WriteFile(configFile, data, 0o666); err != nil {
+		c.Ui.Error("Failed to write create settings for service: " + err.Error())
+		return 1
+	}
+
 	cmdArgs := []string{
 		"container", "create",
 		"--name", containerName,
