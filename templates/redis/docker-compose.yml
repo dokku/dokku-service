@@ -1,0 +1,32 @@
+---
+version: "3.7"
+
+services:
+  postgres:
+    image: postgres:16.0
+
+    build:
+      dockerfile: Dockerfile
+      args:
+        REDIS_DATABASE: "0"
+        REDIS_PASSWORD_SECRET: "{{ randAlphaNum 32 }}"
+        LANG: "C.UTF-8"
+        LC_ALL: "C.UTF-8"
+
+    ports:
+      - "6379"
+
+    volumes:
+      - /data
+
+    labels:
+      "dokku.com/service.name": "redis"
+      "dokku.com/service.description": "A template for managing redis"
+      "dokku.com/service.commands.connect": "redis-cli"
+      "dokku.com/service.hooks.image": "bash:5.2"
+      "dokku.com/service.variables.exported.REDIS_URL": "redis://:{{ .REDIS_PASSWORD_SECRET }}@{{ .HOSTNAME }}:6379/{{ .REDIS_DATABASE }}"
+      "dokku.com/service.variables.exported.REDIS_HOST": "{{ .HOSTNAME }}"
+      "dokku.com/service.variables.exported.REDIS_PASSWORD": "{{ .REDIS_PASSWORD_SECRET }}"
+      "dokku.com/service.variables.exported.REDIS_PORT": "6379"
+
+    restart: always

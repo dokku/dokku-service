@@ -1,0 +1,43 @@
+---
+version: "3.7"
+
+services:
+  # todo: error if too many services are defined
+  postgres:
+    # todo: error if image is set
+    image: postgres:16.0
+
+    build:
+      dockerfile: Dockerfile
+      args:
+        POSTGRES_DATABASE: ""
+        POSTGRES_PASSWORD_SECRET: "{{ randAlphaNum 32 }}"
+        LANG: "C.UTF-8"
+        LC_ALL: "C.UTF-8"
+
+    ports:
+      # todo: ensure none of these are exposed by default
+      - "5432"
+
+    volumes:
+      # todo: make this a named volume with the proper args
+      - /var/lib/postgresql/data
+
+    labels:
+      "dokku.com/service-name": "postgres"
+      "dokku.com/service-description": "A template for managing postgres"
+      "dokku.com/service-commands/connect": "psql -h localhost -U postgres {{ .POSTGRES_DATABASE }}"
+      "dokku.com/service-commands/export": "pg_dump -Fc --no-acl --no-owner -h localhost -U postgres -w {{ .POSTGRES_DATABASE }}"
+      "dokku.com/service-commands/import": "pg_restore -h localhost -cO --if-exists -d {{ .POSTGRES_DATABASE }} -U postgres -w"
+      "dokku.com/service-variables/exported/DATABASE_URL": "postgres://postgres:{{ .POSTGRES_PASSWORD_SECRET }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DATABASE }}"
+
+    # todo: ensure this is always restarted
+    restart: always
+
+    networks:
+      - dokku
+
+networks:
+  dokku:
+    # todo: make these attachable
+    attachable: true
