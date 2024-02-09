@@ -28,34 +28,34 @@ const (
 )
 
 type ServiceTemplate struct {
-	Name              string
-	Path              string
-	DockerfilePath    string
-	Description       string
-	Arguments         []Argument
-	Hooks             ServiceHooks
-	ExportedVariables map[string]string
-	Commands          map[string]string
-	Ports             map[string]int
-	Volumes           []Volume
+	Name              string            `json:"name"`
+	Path              string            `json:"path"`
+	DockerfilePath    string            `json:"dockerfile_path"`
+	Description       string            `json:"description"`
+	Arguments         []Argument        `json:"arguments"`
+	Hooks             ServiceHooks      `json:"hooks"`
+	ExportedVariables map[string]string `json:"exported_variables"`
+	Commands          map[string]string `json:"commands"`
+	Ports             map[string]int    `json:"ports"`
+	Volumes           []Volume          `json:"volumes"`
 }
 
 type ServiceHooks struct {
-	Image      string
-	PreCreate  bool
-	PostCreate bool
+	Image      string `json:"image"`
+	PreCreate  bool   `json:"pre_create"`
+	PostCreate bool   `json:"post_create"`
 }
 
 type Argument struct {
-	Name       string
-	Template   string
-	Value      string
-	IsVariable bool
+	Name       string `json:"name"`
+	Template   string `json:"template"`
+	Value      string `json:"value"`
+	IsVariable bool   `json:"is_variable"`
 }
 
 type Volume struct {
-	Alias         string
-	ContainerPath string
+	Alias         string `json:"alias"`
+	ContainerPath string `json:"container_path"`
 }
 
 var validLabels map[Label]bool
