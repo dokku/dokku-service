@@ -1,4 +1,4 @@
-# dokku-serive
+# dokku-service
 
 A prototype for managing dokku services based on template repositories.
 
