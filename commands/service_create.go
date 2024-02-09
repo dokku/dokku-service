@@ -265,7 +265,7 @@ func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[st
 		cmdArgs = append(cmdArgs, "--build-arg")
 		cmdArgs = append(cmdArgs, fmt.Sprintf("%s=%s", argument.Key, argument.Value))
 	}
-	cmdArgs = append(cmdArgs, ".")
+	cmdArgs = append(cmdArgs, fmt.Sprintf("templates/%s", template.Name))
 
 	var mu sync.Mutex
 	cmd := execute.ExecTask{
