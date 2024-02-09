@@ -2,39 +2,58 @@ package commands
 
 import (
 	"context"
-	"dokku-service/logstreamer"
+	"dokku-service/container"
 	"dokku-service/template"
+	"dokku-service/volume"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
-	"sync"
 
-	execute "github.com/alexellis/go-execute/v2"
-	"github.com/gosimple/slug"
 	"github.com/josegonzalez/cli-skeleton/command"
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
+
+	"dokku-service/argument"
+	"dokku-service/hook"
+	"dokku-service/image"
 )
 
 const DATA_ROOT = "/tmp"
 
 type CreateConfig struct {
-	Arguments map[string]string `json:"arguments"`
-	DataRoot  string            `json:"data_root"`
+	Config   RunConfig                `json:"config"`
+	Template template.ServiceTemplate `json:"template"`
+}
+
+type RunConfig struct {
+	Arguments            map[string]string `json:"arguments"`
+	ContainerCreateFlags []string          `json:"container_create_flags"`
+	DataRoot             string            `json:"data_root"`
+	EnvironmentVariables map[string]string `json:"env"`
+	ImageBuildFlags      []string          `json:"image_build_flags"`
+	ServiceRoot          string            `json:"service_root"`
+	UseVolumes           bool              `json:"use_volumes"`
 }
 
 type ServiceCreateCommand struct {
 	command.Meta
 
+	// Context passed to the command
+	Context context.Context
+
 	// Arguments to pass to the docker container via BUILD_ARGS
 	arguments map[string]string
 
+	// Flags to pass to the container create command
+	containerCreateFlags []string
+
 	// The root directory for service data
 	dataRoot string
+
+	// Flags to pass to the image build command
+	imageBuildFlags []string
 
 	// Use volumes instead of a directory on disk for data
 	useVolumes bool
@@ -88,6 +107,8 @@ func (c *ServiceCreateCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
 	f.StringToStringVar(&c.arguments, "argument", map[string]string{}, "arguments to set when creating the service")
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
+	f.StringArrayVar(&c.containerCreateFlags, "container-create-flags", []string{}, "flags to pass to the container create command")
+	f.StringArrayVar(&c.imageBuildFlags, "image-build-flags", []string{}, "flags to pass to the image build command")
 	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }
@@ -142,7 +163,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 2
 	}
 
-	serviceRoot := fmt.Sprintf("%s/%s/%s/config.json", c.dataRoot, entry.Name, serviceName)
+	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, entry.Name, serviceName)
 	if _, err := os.Stat(serviceRoot); err != nil && !errors.Is(err, os.ErrNotExist) {
 		c.Ui.Error("Service directory already exists but container is not running")
 		return 3
@@ -173,7 +194,9 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	envFile := fmt.Sprintf("%s/.env", serviceRoot)
 	envLines := []string{}
+	envConfig := map[string]string{}
 	for _, argument := range containerArgs {
+		envConfig[strings.TrimSuffix(argument.Key, "_SECRET")] = argument.Value
 		envLines = append(envLines, fmt.Sprintf(`%s=%s`, strings.TrimSuffix(argument.Key, "_SECRET"), argument.Value))
 	}
 	if err := os.WriteFile(envFile, []byte(strings.Join(envLines, "\n")+"\n"), 0o666); err != nil {
@@ -183,10 +206,18 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	configFile := fmt.Sprintf("%s/config.json", serviceRoot)
 	createConfig := CreateConfig{
-		Arguments: c.arguments,
-		DataRoot:  c.dataRoot,
+		Config: RunConfig{
+			Arguments:            c.arguments,
+			ContainerCreateFlags: c.containerCreateFlags,
+			DataRoot:             c.dataRoot,
+			EnvironmentVariables: envConfig,
+			ImageBuildFlags:      c.imageBuildFlags,
+			ServiceRoot:          serviceRoot,
+			UseVolumes:           c.useVolumes,
+		},
+		Template: entry,
 	}
-	data, err := json.Marshal(createConfig)
+	data, err := json.MarshalIndent(createConfig, "", "  ")
 	if err != nil {
 		c.Ui.Error("Failed to marshal create settings for service: " + err.Error())
 		return 1
@@ -197,19 +228,9 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	cmdArgs := []string{
-		"container", "create",
-		"--name", containerName,
-		"--env-file", envFile,
-		"--restart", "always",
-		"--hostname", containerName,
-		"--cidfile", fmt.Sprintf("%s/ID", serviceRoot),
-	}
-	cmdArgs = append(cmdArgs, "--label", fmt.Sprintf("com.dokku.service-volumes=%s", strconv.FormatBool(c.useVolumes)))
-
 	// todo: ensure volumes dont exist
 	logger.LogHeader2("Creating volumes")
-	var createdVolumes []Volume
+	var createdVolumes []volume.Volume
 	for _, volumeDescriptor := range entry.Volumes {
 		volume, err := c.createVolume(serviceName, entry, volumeDescriptor)
 		if err != nil {
@@ -218,9 +239,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		}
 
 		createdVolumes = append(createdVolumes, volume)
-		cmdArgs = append(cmdArgs, "--mount", volume.MountArgs)
 	}
-	cmdArgs = append(cmdArgs, imageName)
 
 	logger.LogHeader2("Running pre-create hook")
 	if err := c.executeHook("pre-create", entry.Hooks.PreCreate, serviceName, createdVolumes, entry); err != nil {
@@ -228,8 +247,18 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
+	err = container.Create(c.Context, container.CreateInput{
+		CreateFlags:   c.containerCreateFlags,
+		ContainerName: containerName,
+		EnvFile:       envFile,
+		ImageName:     imageName,
+		ServiceRoot:   serviceRoot,
+		Volumes:       createdVolumes,
+		UseVolumes:    c.useVolumes,
+	})
+
 	logger.LogHeader2("Creating container")
-	if err := c.createContainer(cmdArgs); err != nil {
+	if err != nil {
 		c.Ui.Error("Failed to create container for service: " + err.Error())
 		return 1
 	}
@@ -253,247 +282,54 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 }
 
 func (c *ServiceCreateCommand) containerExists(containerName string) (bool, error) {
-	cmd := execute.ExecTask{
-		Command: "docker",
-		Args: []string{
-			"container", "inspect",
-			containerName,
-		},
-		StreamStdio: false,
-	}
-
-	cmd.PrintCommand = true
-	res, err := cmd.Execute(context.Background())
-	if err != nil {
-		return false, fmt.Errorf("check for service existence failed: %w", err)
-	}
-
-	if res.ExitCode != 0 {
-		return false, nil
-	}
-
-	return true, nil
+	return container.Exists(c.Context, container.ExistsInput{
+		Name: containerName,
+	})
 }
 
-func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[string]Argument, template template.ServiceTemplate) error {
-	cmdArgs := []string{
-		"image", "build",
-		"-f", template.DockerfilePath,
-		"-t", imageName,
-	}
-
-	for _, argument := range containerArgs {
-		if strings.HasSuffix(argument.Key, "_SECRET") {
-			continue
-		}
-
-		cmdArgs = append(cmdArgs, "--build-arg")
-		cmdArgs = append(cmdArgs, fmt.Sprintf("%s=%s", argument.Key, argument.Value))
-	}
-	cmdArgs = append(cmdArgs, fmt.Sprintf("templates/%s", template.Name))
-
-	var mu sync.Mutex
-	cmd := execute.ExecTask{
-		Command:      "docker",
-		Args:         cmdArgs,
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
-	}
-
-	cmd.PrintCommand = true
-	res, err := cmd.Execute(context.Background())
-	if err != nil {
-		return fmt.Errorf("image build for service failed: %w", err)
-	}
-
-	if res.ExitCode != 0 {
-		// todo: return exit code
-		return fmt.Errorf("non-zero exit code %d: %s", res.ExitCode, res.Stderr)
-	}
-
-	return nil
+func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[string]argument.Argument, template template.ServiceTemplate) error {
+	return image.Build(c.Context, image.BuildInput{
+		Arguments:  containerArgs,
+		BuildFlags: c.imageBuildFlags,
+		Name:       imageName,
+		Template:   template,
+	})
 }
 
-func (c *ServiceCreateCommand) createContainer(cmdArgs []string) error {
-	var mu sync.Mutex
-	cmd := execute.ExecTask{
-		Command:      "docker",
-		Args:         cmdArgs,
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
-	}
-
-	cmd.PrintCommand = true
-	res, err := cmd.Execute(context.Background())
-	if err != nil {
-		return fmt.Errorf("container create for service failed: %w", err)
-	}
-
-	if res.ExitCode != 0 {
-		// todo: return exit code
-		return fmt.Errorf("non-zero exit code %d: %s", res.ExitCode, res.Stderr)
-	}
-
-	return nil
-}
-
-func (c *ServiceCreateCommand) executeHook(hook string, hookExists bool, serviceName string, volumes []Volume, template template.ServiceTemplate) error {
-	if !hookExists {
-		return nil
-	}
-
-	// todo: support a library for templates
-	hookPath := fmt.Sprintf("templates/%s/bin/%s", template.Name, hook)
-	hookPath, err := filepath.Abs(hookPath)
-	if err != nil {
-		return fmt.Errorf("deriving absolute path to %s hook failed: %w", hook, err)
-	}
-
-	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, template.Name, serviceName)
-	cmdArgs := []string{
-		"container",
-		"run",
-		"--rm",
-		"--volume",
-		fmt.Sprintf("%s:/usr/local/bin/hook", hookPath),
-		"--env-file",
-		fmt.Sprintf("%s/.env", serviceRoot),
-	}
-
-	for _, volume := range volumes {
-		cmdArgs = append(cmdArgs, "--mount", volume.MountArgs)
-		cmdArgs = append(cmdArgs, "--env", fmt.Sprintf("VOLUME_%s=%s", volume.Alias, volume.ContainerPath))
-	}
-
-	cmdArgs = append(cmdArgs, template.Hooks.Image, "/usr/local/bin/hook")
-	var mu sync.Mutex
-	cmd := execute.ExecTask{
-		Command:      "docker",
-		Args:         cmdArgs,
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
-	}
-
-	cmd.PrintCommand = true
-	res, err := cmd.Execute(context.Background())
-	if err != nil {
-		return fmt.Errorf("%s hook container for service failed: %w", hook, err)
-	}
-
-	if res.ExitCode != 0 {
-		// todo: return exit code
-		return fmt.Errorf("non-zero exit code %d: %s", res.ExitCode, res.Stderr)
-	}
-
-	return nil
+func (c *ServiceCreateCommand) executeHook(name string, hookExists bool, serviceName string, volumes []volume.Volume, template template.ServiceTemplate) error {
+	return hook.Execute(c.Context, hook.ExecuteInput{
+		DataRoot:    c.dataRoot,
+		Exists:      hookExists,
+		Name:        name,
+		ServiceName: serviceName,
+		Template:    template,
+		Volumes:     volumes,
+	})
 }
 
 func (c *ServiceCreateCommand) startContainer(containerName string) error {
-	var mu sync.Mutex
-	cmd := execute.ExecTask{
-		Command:      "docker",
-		Args:         []string{"container", "start", containerName},
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
-	}
-
-	cmd.PrintCommand = true
-	res, err := cmd.Execute(context.Background())
-	if err != nil {
-		return fmt.Errorf("container start for service failed: %w", err)
-	}
-
-	if res.ExitCode != 0 {
-		// todo: return exit code
-		return fmt.Errorf("non-zero exit code %d: %s", res.ExitCode, res.Stderr)
-	}
-
-	return nil
+	return container.Start(c.Context, container.StartInput{
+		Name: containerName,
+	})
 }
 
-type Volume struct {
-	Alias         string
-	Source        string
-	MountType     string
-	ContainerPath string
-	MountArgs     string
+func (c *ServiceCreateCommand) createVolume(serviceName string, template template.ServiceTemplate, volumeDescriptor template.Volume) (v volume.Volume, err error) {
+	return volume.Create(c.Context, volume.CreateInput{
+		DataRoot:         c.dataRoot,
+		ServiceName:      serviceName,
+		Template:         template,
+		VolumeDescriptor: volumeDescriptor,
+		UseVolumes:       c.useVolumes,
+	})
 }
 
-func (c *ServiceCreateCommand) createVolume(serviceName string, template template.ServiceTemplate, volumeDescriptor template.Volume) (v Volume, err error) {
-	if !c.useVolumes {
-		serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, template.Name, serviceName)
-		source := fmt.Sprintf("%s/%s", serviceRoot, volumeDescriptor.Alias)
-		mountType := "bind"
-		if err := os.MkdirAll(filepath.Clean(source), os.ModePerm); err != nil {
-			return Volume{}, errors.New("could not create volume host dir")
-		}
+func (c *ServiceCreateCommand) collectContainerArgs(template template.ServiceTemplate) (map[string]argument.Argument, error) {
+	arguments := map[string]argument.Argument{}
 
-		return Volume{
-			Alias:         volumeDescriptor.Alias,
-			ContainerPath: volumeDescriptor.ContainerPath,
-			MountType:     mountType,
-			Source:        source,
-			MountArgs:     fmt.Sprintf("type=%s,source=%s,destination=%s", mountType, source, volumeDescriptor.ContainerPath),
-		}, nil
-	}
-
-	var mu sync.Mutex
-	source := fmt.Sprintf("dokku.%s.%s.%s", template.Name, serviceName, slug.Make(volumeDescriptor.Alias))
-	mountType := "volume"
-	cmd := execute.ExecTask{
-		Command: "docker",
-		Args: []string{
-			"volume", "create",
-			"--label=org.label-schema.schema-version=1.0",
-			"--label=org.label-schema.vendor=dokku",
-			fmt.Sprintf("--label=com.dokku.service-name=%s", serviceName),
-			fmt.Sprintf("--label=com.dokku.service-type=%s", template.Name),
-			fmt.Sprintf("--label=com.dokku.service-container-path=%s", volumeDescriptor.ContainerPath),
-			fmt.Sprintf("--label=com.dokku.service-alias=%s", volumeDescriptor.Alias),
-			source,
-		},
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
-	}
-
-	cmd.PrintCommand = true
-	res, err := cmd.Execute(context.Background())
-	if err != nil {
-		return Volume{}, err
-	}
-
-	if res.ExitCode != 0 {
-		// todo: return exit code
-		return Volume{}, fmt.Errorf("non-zero exit code %d: %s", res.ExitCode, res.Stderr)
-	}
-
-	return Volume{
-		Alias:         volumeDescriptor.Alias,
-		ContainerPath: volumeDescriptor.ContainerPath,
-		MountType:     mountType,
-		Source:        source,
-		MountArgs:     fmt.Sprintf("type=%s,source=%s,destination=%s", mountType, source, volumeDescriptor.ContainerPath),
-	}, nil
-}
-
-type Argument struct {
-	Key      string
-	Value    string
-	Override bool
-}
-
-func (c *ServiceCreateCommand) collectContainerArgs(template template.ServiceTemplate) (map[string]Argument, error) {
-	arguments := map[string]Argument{}
-
-	for _, argument := range template.Arguments {
-		arguments[argument.Name] = Argument{
-			Key:      argument.Name,
-			Value:    argument.Value,
+	for _, templateArg := range template.Arguments {
+		arguments[templateArg.Name] = argument.Argument{
+			Key:      templateArg.Name,
+			Value:    templateArg.Value,
 			Override: false,
 		}
 	}
@@ -503,7 +339,7 @@ func (c *ServiceCreateCommand) collectContainerArgs(template template.ServiceTem
 			value = os.Getenv(key)
 		}
 
-		arguments[key] = Argument{
+		arguments[key] = argument.Argument{
 			Key:      key,
 			Value:    value,
 			Override: true,
