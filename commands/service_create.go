@@ -201,6 +201,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 	cmdArgs = append(cmdArgs, "--label", fmt.Sprintf("com.dokku.service-volumes=%s", strconv.FormatBool(c.useVolumes)))
 
+	// todo: ensure volumes dont exist
 	logger.LogHeader2("Creating volumes")
 	var createdVolumes []Volume
 	for _, volumeDescriptor := range entry.Volumes {
@@ -239,6 +240,8 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		c.Ui.Error(err.Error())
 		return 1
 	}
+
+	// todo: wait until container is ready
 
 	return 0
 }
