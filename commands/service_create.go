@@ -24,7 +24,13 @@ const DATA_ROOT = "/tmp"
 type ServiceCreateCommand struct {
 	command.Meta
 
-	arguments  map[string]string
+	// Arguments to pass to the docker container via BUILD_ARGS
+	arguments map[string]string
+
+	// The root directory for service data
+	dataRoot string
+
+	// Use volumes instead of a directory on disk for data
 	useVolumes bool
 }
 
@@ -75,6 +81,7 @@ func (c *ServiceCreateCommand) ParsedArguments(args []string) (map[string]comman
 func (c *ServiceCreateCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
 	f.StringToStringVar(&c.arguments, "argument", map[string]string{}, "arguments to set when creating the service")
+	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
 	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }
@@ -142,7 +149,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	envFile := fmt.Sprintf("%s/%s/%s/.env", DATA_ROOT, entry.Name, serviceName)
+	envFile := fmt.Sprintf("%s/%s/%s/.env", c.dataRoot, entry.Name, serviceName)
 	envLines := []string{}
 	for _, argument := range containerArgs {
 		envLines = append(envLines, fmt.Sprintf(`%s=%s`, argument.Key, argument.Value))
@@ -158,7 +165,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		"--env-file", envFile,
 		"--restart", "always",
 		"--hostname", containerName,
-		"--cidfile", fmt.Sprintf("%s/%s/%s/ID", DATA_ROOT, entry.Name, serviceName),
+		"--cidfile", fmt.Sprintf("%s/%s/%s/ID", c.dataRoot, entry.Name, serviceName),
 	}
 	cmdArgs = append(cmdArgs, "--label", fmt.Sprintf("com.dokku.service-volumes=%s", strconv.FormatBool(c.useVolumes)))
 
@@ -306,7 +313,7 @@ func (c *ServiceCreateCommand) executeHook(hook string, hookExists bool, service
 		"--volume",
 		fmt.Sprintf("%s:/usr/local/bin/hook", hookPath),
 		"--env-file",
-		fmt.Sprintf("%s/%s/%s/.env", DATA_ROOT, template.Name, serviceName),
+		fmt.Sprintf("%s/%s/%s/.env", c.dataRoot, template.Name, serviceName),
 	}
 
 	for _, volume := range volumes {
@@ -372,7 +379,7 @@ type Volume struct {
 
 func (c *ServiceCreateCommand) createVolume(serviceName string, template template.ServiceTemplate, volumeDescriptor template.Volume) (v Volume, err error) {
 	if !c.useVolumes {
-		source := fmt.Sprintf("%s/%s/%s/%s", DATA_ROOT, template.Name, serviceName, volumeDescriptor.Alias)
+		source := fmt.Sprintf("%s/%s/%s/%s", c.dataRoot, template.Name, serviceName, volumeDescriptor.Alias)
 		mountType := "bind"
 		if err := os.MkdirAll(filepath.Clean(source), os.ModePerm); err != nil {
 			return Volume{}, errors.New("could not create volume host dir")
