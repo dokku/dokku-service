@@ -29,11 +29,11 @@ type ServiceCreateCommand struct {
 }
 
 func (c *ServiceCreateCommand) Name() string {
-	return "nil"
+	return "service-create"
 }
 
 func (c *ServiceCreateCommand) Synopsis() string {
-	return "Nil command"
+	return "Service create command"
 }
 
 func (c *ServiceCreateCommand) Help() string {

@@ -18,10 +18,10 @@ go build -ldflags "-X main.Version=0.1.0
 ## Usage
 
 ```
-Usage: nil [--version] [--help] <command> [<args>]
+Usage: dokku-service [--version] [--help] <command> [<args>]
 
 Available commands are:
-    service-create    Nil command
+    service-create    Service create command
     template-info     template-info command
     template-list     template-list command
     version           Return the version of the binary
