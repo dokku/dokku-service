@@ -10,9 +10,10 @@ LABEL com.dokku.template.config.commands.export="pg_dump -Fc --no-acl --no-owner
 LABEL com.dokku.template.config.commands.import="pg_restore -h localhost -cO --if-exists -d {{ .POSTGRES_DATABASE }} -U postgres -w"
 LABEL com.dokku.template.config.ports.expose=5432
 LABEL com.dokku.template.config.ports.wait=5432
-LABEL com.dokku.template.config.variables.exported.DATABASE_URL="postgres://postgres:{{ .POSTGRES_PASSWORD }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DATABASE }}"
+LABEL com.dokku.template.config.variables.exported.DATABASE_URL="postgres://postgres:{{ .POSTGRES_PASSWORD_SECRET }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DATABASE }}"
 
-ARG POSTGRES_PASSWORD="{{ randAlphaNum 32 }}"
 ARG POSTGRES_DATABASE
+ARG POSTGRES_PASSWORD_SECRET="{{ randAlphaNum 32 }}"
 ARG LANG=C.UTF-8 
 ARG LC_ALL=C.UTF-8
+

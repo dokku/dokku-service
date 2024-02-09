@@ -152,7 +152,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	envFile := fmt.Sprintf("%s/%s/%s/.env", c.dataRoot, entry.Name, serviceName)
 	envLines := []string{}
 	for _, argument := range containerArgs {
-		envLines = append(envLines, fmt.Sprintf(`%s=%s`, argument.Key, argument.Value))
+		envLines = append(envLines, fmt.Sprintf(`%s=%s`, strings.TrimSuffix(argument.Key, "_SECRET"), argument.Value))
 	}
 	if err := os.WriteFile(envFile, []byte(strings.Join(envLines, "\n")+"\n"), 0o666); err != nil {
 		c.Ui.Error("Failed to write settings for service: " + err.Error())
@@ -242,6 +242,10 @@ func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[st
 	}
 
 	for _, argument := range containerArgs {
+		if strings.HasSuffix(argument.Key, "_SECRET") {
+			continue
+		}
+
 		cmdArgs = append(cmdArgs, "--build-arg")
 		cmdArgs = append(cmdArgs, fmt.Sprintf("%s=%s", argument.Key, argument.Value))
 	}
