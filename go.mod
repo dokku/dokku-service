@@ -7,7 +7,7 @@ require (
 	github.com/alexellis/go-execute/v2 v2.2.1
 	github.com/asottile/dockerfile v3.1.0+incompatible
 	github.com/gosimple/slug v1.13.1
-	github.com/josegonzalez/cli-skeleton v0.15.0
+	github.com/josegonzalez/cli-skeleton v0.16.0
 	github.com/mitchellh/cli v1.1.5
 	github.com/posener/complete v1.2.3
 	github.com/spf13/pflag v1.0.5
@@ -37,8 +37,8 @@ require (
 	github.com/rs/zerolog v1.32.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
-	golang.org/x/term v0.16.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/term v0.17.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
