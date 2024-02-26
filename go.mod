@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/alexellis/go-execute/v2 v2.2.1
 	github.com/asottile/dockerfile v3.1.0+incompatible
-	github.com/gosimple/slug v1.13.1
+	github.com/gosimple/slug v1.14.0
 	github.com/josegonzalez/cli-skeleton v0.16.0
 	github.com/mitchellh/cli v1.1.5
 	github.com/posener/complete v1.2.3
