@@ -61,6 +61,9 @@ type ServiceCreateCommand struct {
 	// dataRoot specifies the root directory for service data
 	dataRoot string
 
+	// env specifies the environment variables to pass to the service
+	env map[string]string
+
 	// imageName specifies the name to use when building the image
 	imageName string
 
@@ -128,6 +131,7 @@ func (c *ServiceCreateCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
 	f.StringToStringVar(&c.arguments, "argument", map[string]string{}, "arguments to set when creating the service")
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
+	f.StringToStringVar(&c.env, "env", map[string]string{}, "env variables to set when creating the service")
 	f.StringArrayVar(&c.containerCreateFlags, "container-create-flags", []string{}, "flags to pass to the container create command")
 	f.StringVar(&c.imageName, "image-name", "", "the name to use when building the image")
 	f.StringVar(&c.imageTag, "image-tag", "", "the tag to use when building the image")
@@ -250,6 +254,17 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		envConfig[strings.TrimSuffix(argument.Key, "_SECRET")] = argument.Value
 		envLines = append(envLines, fmt.Sprintf(`%s=%s`, strings.TrimSuffix(argument.Key, "_SECRET"), argument.Value))
 	}
+
+	for key, value := range c.env {
+		if _, ok := envConfig[key]; ok {
+			c.Ui.Error(fmt.Sprintf("Environment variable '%s' must be set by argument", key))
+			return 1
+		}
+
+		envConfig[key] = value
+		envLines = append(envLines, fmt.Sprintf(`%s=%s`, key, value))
+	}
+
 	if err := os.WriteFile(envFile, []byte(strings.Join(envLines, "\n")+"\n"), 0o666); err != nil {
 		c.Ui.Error("Failed to write settings for service: " + err.Error())
 		return 1
