@@ -340,6 +340,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
+	logger.LogHeader2("Creating container")
 	err = container.Create(c.Context, container.CreateInput{
 		CreateFlags:   c.containerCreateFlags,
 		ContainerName: containerName,
@@ -349,8 +350,6 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		Volumes:       createdVolumes,
 		UseVolumes:    c.useVolumes,
 	})
-
-	logger.LogHeader2("Creating container")
 	if err != nil {
 		c.Ui.Error("Failed to create container for service: " + err.Error())
 		return 1
