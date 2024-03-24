@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/alexellis/go-execute/v2"
+	"mvdan.cc/sh/v3/shell"
 )
 
 type CreateInput struct {
@@ -47,8 +48,9 @@ func Create(ctx context.Context, input CreateInput) error {
 	}
 	cmdArgs = append(cmdArgs, "--label", fmt.Sprintf("com.dokku.service-volumes=%s", strconv.FormatBool(input.UseVolumes)))
 
-	for _, flag := range input.CreateFlags {
-		cmdArgs = append(cmdArgs, "--"+flag)
+	for _, createFlag := range input.CreateFlags {
+		out, _ := shell.Fields(createFlag, nil)
+		cmdArgs = append(cmdArgs, out...)
 	}
 
 	for _, volume := range input.Volumes {
