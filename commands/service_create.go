@@ -177,9 +177,23 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	// todo: ensure the service doesn't exist at the specified path
 
 	logger.LogHeader1(fmt.Sprintf("Creating %s service %s", templateName, serviceName))
-	entry, err := template.ParseDockerfile(fmt.Sprintf("templates/%s", templateName))
+
+	logger.LogHeader2(fmt.Sprintf("Validating template %s", templateName))
+	entry, err := template.ParseDockerfile(templateName)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
+		return 1
+	}
+
+	templatePath, err := os.MkdirTemp("", "dokku-service")
+	if err != nil {
+		c.Ui.Error("Failed to create temporary directory: " + err.Error())
+		return 1
+	}
+	// defer os.RemoveAll(path)
+
+	if err := template.ExtractTemplate(entry, templatePath); err != nil {
+		c.Ui.Error("Failed to extract template: " + err.Error())
 		return 1
 	}
 
@@ -255,7 +269,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		ServiceType: entry.Name,
 	})
 	logger.LogHeader2("Building base image from template")
-	if err := c.buildImage(imageName, containerArgs, entry); err != nil {
+	if err := c.buildImage(imageName, containerArgs, entry, templatePath); err != nil {
 		c.Ui.Error("Failed to build image for service: " + err.Error())
 		return 1
 	}
@@ -336,7 +350,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	logger.LogHeader2("Executing pre-create hook")
-	if err := c.executeHook("pre-create", entry.Hooks.PreCreate, serviceName, createdVolumes, entry); err != nil {
+	if err := c.executeHook("pre-create", entry.Hooks.PreCreate, serviceName, createdVolumes, entry, templatePath); err != nil {
 		c.Ui.Error("Failed to execute pre-create hook for service: " + err.Error())
 		return 1
 	}
@@ -370,7 +384,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	// todo: attach container to container-specific network
 	logger.LogHeader2("Executing post-create hook")
-	if err := c.executeHook("post-create", entry.Hooks.PostCreate, serviceName, createdVolumes, entry); err != nil {
+	if err := c.executeHook("post-create", entry.Hooks.PostCreate, serviceName, createdVolumes, entry, templatePath); err != nil {
 		c.Ui.Error("Failed to execute post-create hook for service: " + err.Error())
 		return 1
 	}
@@ -420,7 +434,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	logger.LogHeader2("Executing post-start hook")
-	if err := c.executeHook("post-start", entry.Hooks.PostStart, serviceName, createdVolumes, entry); err != nil {
+	if err := c.executeHook("post-start", entry.Hooks.PostStart, serviceName, createdVolumes, entry, templatePath); err != nil {
 		c.Ui.Error("Failed to execute post-start hook for service: " + err.Error())
 		return 1
 	}
@@ -434,23 +448,25 @@ func (c *ServiceCreateCommand) containerExists(containerName string) (bool, erro
 	})
 }
 
-func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[string]argument.Argument, template template.ServiceTemplate) error {
+func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[string]argument.Argument, template template.ServiceTemplate, templatePath string) error {
 	return image.Build(c.Context, image.BuildInput{
-		Arguments:  containerArgs,
-		BuildFlags: c.imageBuildFlags,
-		Name:       imageName,
-		Template:   template,
+		Arguments:    containerArgs,
+		BuildFlags:   c.imageBuildFlags,
+		Name:         imageName,
+		Template:     template,
+		TemplatePath: templatePath,
 	})
 }
 
-func (c *ServiceCreateCommand) executeHook(name string, hookExists bool, serviceName string, volumes []volume.Volume, template template.ServiceTemplate) error {
+func (c *ServiceCreateCommand) executeHook(name string, hookExists bool, serviceName string, volumes []volume.Volume, template template.ServiceTemplate, templatePath string) error {
 	return hook.Execute(c.Context, hook.ExecuteInput{
-		DataRoot:    c.dataRoot,
-		Exists:      hookExists,
-		Name:        name,
-		ServiceName: serviceName,
-		Template:    template,
-		Volumes:     volumes,
+		DataRoot:     c.dataRoot,
+		Exists:       hookExists,
+		Name:         name,
+		ServiceName:  serviceName,
+		Template:     template,
+		TemplatePath: templatePath,
+		Volumes:      volumes,
 	})
 }
 

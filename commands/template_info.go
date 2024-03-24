@@ -88,7 +88,7 @@ func (c *TemplateInfoCommand) Run(args []string) int {
 
 	templateName := arguments["template"].StringValue()
 	logger.LogHeader1(fmt.Sprintf("%s info", templateName))
-	entry, err := template.ParseDockerfile(fmt.Sprintf("templates/%s", templateName))
+	entry, err := template.ParseDockerfile(templateName)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
 		return 1

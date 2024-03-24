@@ -7,6 +7,7 @@ import (
 	"dokku-service/template"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -26,13 +27,17 @@ type BuildInput struct {
 
 	// Template to use for building the image
 	Template template.ServiceTemplate
+
+	// TemplatePath specifies the path to the template
+	TemplatePath string
 }
 
 // Build builds a Docker image
 func Build(ctx context.Context, input BuildInput) error {
+	dockerfilePath := filepath.Join(input.TemplatePath, "Dockerfile")
 	cmdArgs := []string{
 		"image", "build",
-		"-f", input.Template.DockerfilePath,
+		"-f", dockerfilePath,
 		"-t", input.Name,
 	}
 
@@ -49,7 +54,7 @@ func Build(ctx context.Context, input BuildInput) error {
 		cmdArgs = append(cmdArgs, "--"+flag)
 	}
 
-	cmdArgs = append(cmdArgs, fmt.Sprintf("templates/%s", input.Template.Name))
+	cmdArgs = append(cmdArgs, input.TemplatePath)
 
 	var mu sync.Mutex
 	cmd := execute.ExecTask{

@@ -11,6 +11,10 @@ LABEL com.dokku.template.config.commands.import="pg_restore -h localhost -cO --i
 LABEL com.dokku.template.config.ports.expose=5432
 LABEL com.dokku.template.config.ports.wait=5432
 LABEL com.dokku.template.config.variables.exported.DATABASE_URL="postgres://postgres:{{ .POSTGRES_PASSWORD_SECRET }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DATABASE }}"
+LABEL com.dokku.template.config.variables.mapped.password="POSTGRES_PASSWORD"
+LABEL com.dokku.template.config.variables.mapped.root-password=""
+
+
 
 ARG POSTGRES_DATABASE
 ARG POSTGRES_PASSWORD_SECRET="{{ randAlphaNum 32 }}"

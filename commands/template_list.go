@@ -74,7 +74,7 @@ func (c *TemplateListCommand) Run(args []string) int {
 		return 1
 	}
 
-	dirEntries, err := os.ReadDir("templates")
+	dirEntries, err := template.ReadDir("")
 	if err != nil {
 		c.Ui.Error(err.Error())
 		return 1
@@ -88,7 +88,7 @@ func (c *TemplateListCommand) Run(args []string) int {
 
 	logger.LogHeader1("Templates")
 	for _, dirEntry := range dirEntries {
-		entry, err := template.ParseDockerfile(fmt.Sprintf("templates/%s", dirEntry.Name()))
+		entry, err := template.ParseDockerfile(dirEntry.Name())
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
 			continue

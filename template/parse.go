@@ -90,7 +90,12 @@ func init() {
 
 func ParseDockerfile(path string) (ServiceTemplate, error) {
 	dockerfilePath := fmt.Sprintf("%s/Dockerfile", path)
-	commands, err := dockerfile.ParseFile(dockerfilePath)
+	reader, err := ReadTemplate(dockerfilePath)
+	if err != nil {
+		return ServiceTemplate{}, fmt.Errorf("failed to read Dockerfile: %w", err)
+	}
+
+	commands, err := dockerfile.ParseReader(reader)
 	if err != nil {
 		return ServiceTemplate{}, fmt.Errorf("dockerfile parse error: %w", err)
 	}
