@@ -231,16 +231,6 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 3
 	}
 
-	if err := os.MkdirAll(fmt.Sprintf("%s/%s", c.dataRoot, entry.Name), os.ModePerm); err != nil {
-		c.Ui.Error("Failed to create service directory: " + err.Error())
-		return 1
-	}
-
-	if err := os.MkdirAll(serviceRoot, os.ModePerm); err != nil {
-		c.Ui.Error("Failed to create service directory: " + err.Error())
-		return 1
-	}
-
 	containerArgs, err := c.collectContainerArgs(entry)
 	if err != nil {
 		c.Ui.Error("Failed to collect arguments for service: " + err.Error())
@@ -263,6 +253,16 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 		envConfig[key] = value
 		envLines = append(envLines, fmt.Sprintf(`%s=%s`, key, value))
+	}
+
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s", c.dataRoot, entry.Name), os.ModePerm); err != nil {
+		c.Ui.Error("Failed to create service directory: " + err.Error())
+		return 1
+	}
+
+	if err := os.MkdirAll(serviceRoot, os.ModePerm); err != nil {
+		c.Ui.Error("Failed to create service directory: " + err.Error())
+		return 1
 	}
 
 	if err := os.WriteFile(envFile, []byte(strings.Join(envLines, "\n")+"\n"), 0o666); err != nil {
