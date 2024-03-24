@@ -190,7 +190,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		c.Ui.Error("Failed to create temporary directory: " + err.Error())
 		return 1
 	}
-	// defer os.RemoveAll(path)
+	defer os.RemoveAll(templatePath)
 
 	if err := template.ExtractTemplate(entry, templatePath); err != nil {
 		c.Ui.Error("Failed to extract template: " + err.Error())
