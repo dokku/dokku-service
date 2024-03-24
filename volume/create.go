@@ -40,9 +40,19 @@ func Create(ctx context.Context, input CreateInput) (v Volume, err error) {
 		}, nil
 	}
 
-	var mu sync.Mutex
-	source := fmt.Sprintf("dokku.%s.%s.%s", input.Template.Name, input.ServiceName, slug.Make(input.VolumeDescriptor.Alias))
+	volumeName := fmt.Sprintf("dokku.%s.%s.%s", input.Template.Name, input.ServiceName, slug.Make(input.VolumeDescriptor.Alias))
 	mountType := "volume"
+	if ok, err := Exists(ctx, ExistsInput{Name: volumeName}); ok && err == nil {
+		return Volume{
+			Alias:         input.VolumeDescriptor.Alias,
+			ContainerPath: input.VolumeDescriptor.ContainerPath,
+			MountType:     "volume",
+			Source:        volumeName,
+			MountArgs:     fmt.Sprintf("type=%s,source=%s,destination=%s", mountType, volumeName, input.VolumeDescriptor.ContainerPath),
+		}, nil
+	}
+
+	var mu sync.Mutex
 	cmd := execute.ExecTask{
 		Command: "docker",
 		Args: []string{
@@ -53,7 +63,7 @@ func Create(ctx context.Context, input CreateInput) (v Volume, err error) {
 			fmt.Sprintf("--label=com.dokku.service-type=%s", input.Template.Name),
 			fmt.Sprintf("--label=com.dokku.service-container-path=%s", input.VolumeDescriptor.ContainerPath),
 			fmt.Sprintf("--label=com.dokku.service-alias=%s", input.VolumeDescriptor.Alias),
-			source,
+			volumeName,
 		},
 		StreamStdio:  false,
 		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
@@ -75,7 +85,7 @@ func Create(ctx context.Context, input CreateInput) (v Volume, err error) {
 		Alias:         input.VolumeDescriptor.Alias,
 		ContainerPath: input.VolumeDescriptor.ContainerPath,
 		MountType:     mountType,
-		Source:        source,
-		MountArgs:     fmt.Sprintf("type=%s,source=%s,destination=%s", mountType, source, input.VolumeDescriptor.ContainerPath),
+		Source:        volumeName,
+		MountArgs:     fmt.Sprintf("type=%s,source=%s,destination=%s", mountType, volumeName, input.VolumeDescriptor.ContainerPath),
 	}, nil
 }
