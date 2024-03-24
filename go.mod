@@ -9,7 +9,7 @@ require (
 	github.com/alexellis/go-execute/v2 v2.2.1
 	github.com/asottile/dockerfile v3.1.0+incompatible
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/docker/docker v25.0.3+incompatible
+	github.com/docker/docker v26.0.0+incompatible
 	github.com/gosimple/slug v1.14.0
 	github.com/josegonzalez/cli-skeleton v0.16.0
 	github.com/mitchellh/cli v1.1.5
@@ -48,6 +48,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/buildkit v0.12.5 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
