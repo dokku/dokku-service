@@ -34,6 +34,8 @@ func Execute(ctx context.Context, input ExecuteInput) error {
 		return fmt.Errorf("deriving absolute path to %s hook failed: %w", input.Name, err)
 	}
 
+	// todo: validate that hook is executable
+
 	serviceRoot := fmt.Sprintf("%s/%s/%s", input.DataRoot, input.Template.Name, input.ServiceName)
 	cmdArgs := []string{
 		"container",
