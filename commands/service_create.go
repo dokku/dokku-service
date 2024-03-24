@@ -170,6 +170,8 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	templateName := arguments["template"].StringValue()
 	serviceName := arguments["name"].StringValue()
 
+	// todo: ensure the service doesn't exist at the specified path
+
 	logger.LogHeader1(fmt.Sprintf("Creating %s service %s", templateName, serviceName))
 	entry, err := template.ParseDockerfile(fmt.Sprintf("templates/%s", templateName))
 	if err != nil {
