@@ -12,6 +12,9 @@ import (
 
 type TemplateListCommand struct {
 	command.Meta
+
+	// templatePath specifies an override path to the template
+	templatePath string
 }
 
 func (c *TemplateListCommand) Name() string {
@@ -48,6 +51,7 @@ func (c *TemplateListCommand) ParsedArguments(args []string) (map[string]command
 
 func (c *TemplateListCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
+	f.StringVar(&c.templatePath, "template-path", "", "an override path to the template")
 	return f
 }
 
@@ -88,7 +92,7 @@ func (c *TemplateListCommand) Run(args []string) int {
 
 	logger.LogHeader1("Templates")
 	for _, dirEntry := range dirEntries {
-		entry, err := template.ParseDockerfile(dirEntry.Name())
+		entry, err := template.ParseDockerfile(dirEntry.Name(), c.templatePath)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
 			continue

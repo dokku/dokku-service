@@ -79,6 +79,9 @@ type ServiceCreateCommand struct {
 	// postStartNetwork specifies the network to attach to the container after start
 	postStartNetwork []string
 
+	// templatePath specifies an override path to the template
+	templatePath string
+
 	// useVolumes specifies whether to use volumes or directories for service data
 	useVolumes bool
 }
@@ -138,6 +141,7 @@ func (c *ServiceCreateCommand) FlagSet() *flag.FlagSet {
 	f.StringArrayVar(&c.imageBuildFlags, "image-build-flags", []string{}, "flags to pass to the image build command")
 	f.StringSliceVar(&c.postCreateNetwork, "post-create-network", []string{}, "network to attach to the container after creation")
 	f.StringSliceVar(&c.postStartNetwork, "post-start-network", []string{}, "network to attach to the container after start")
+	f.StringVar(&c.templatePath, "template-path", "", "an override path to the template")
 	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }
@@ -179,22 +183,25 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	logger.LogHeader1(fmt.Sprintf("Creating %s service %s", templateName, serviceName))
 
 	logger.LogHeader2(fmt.Sprintf("Validating template %s", templateName))
-	entry, err := template.ParseDockerfile(templateName)
+	entry, err := template.ParseDockerfile(templateName, c.templatePath)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
 		return 1
 	}
 
-	templatePath, err := os.MkdirTemp("", "dokku-service")
-	if err != nil {
-		c.Ui.Error("Failed to create temporary directory: " + err.Error())
-		return 1
-	}
-	defer os.RemoveAll(templatePath)
+	templatePath := c.templatePath
+	if c.templatePath == "" {
+		templatePath, err = os.MkdirTemp("", "dokku-service")
+		if err != nil {
+			c.Ui.Error("Failed to create temporary directory: " + err.Error())
+			return 1
+		}
+		defer os.RemoveAll(templatePath)
 
-	if err := template.ExtractTemplate(entry, templatePath); err != nil {
-		c.Ui.Error("Failed to extract template: " + err.Error())
-		return 1
+		if err := template.ExtractTemplate(entry, templatePath); err != nil {
+			c.Ui.Error("Failed to extract template: " + err.Error())
+			return 1
+		}
 	}
 
 	containerName := container.Name(container.NameInput{

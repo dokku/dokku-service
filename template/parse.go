@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -88,11 +90,21 @@ func init() {
 	}
 }
 
-func ParseDockerfile(path string) (ServiceTemplate, error) {
-	dockerfilePath := fmt.Sprintf("%s/Dockerfile", path)
-	reader, err := ReadTemplate(dockerfilePath)
-	if err != nil {
-		return ServiceTemplate{}, fmt.Errorf("failed to read Dockerfile: %w", err)
+func ParseDockerfile(path string, templateOverridePath string) (ServiceTemplate, error) {
+	dockerfilePath := filepath.Join(path, "Dockerfile")
+	var reader io.Reader
+	var err error
+	if templateOverridePath == "" {
+		reader, err = ReadTemplate(dockerfilePath)
+		if err != nil {
+			return ServiceTemplate{}, fmt.Errorf("failed to read Dockerfile: %w", err)
+		}
+	} else {
+		dockerfilePath = filepath.Join(templateOverridePath, "Dockerfile")
+		reader, err = ReadDockerfile(templateOverridePath)
+		if err != nil {
+			return ServiceTemplate{}, fmt.Errorf("failed to read template: %w", err)
+		}
 	}
 
 	commands, err := dockerfile.ParseReader(reader)
