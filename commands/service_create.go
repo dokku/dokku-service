@@ -237,6 +237,29 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
+	// todo: refactor to force-set the IMAGE argument or drop completely
+	if c.imageName != "" {
+		entry.Image.Name = c.imageName
+	}
+	if c.imageTag != "" {
+		entry.Image.Tag = c.imageTag
+	}
+	containerArgs["IMAGE"] = argument.Argument{
+		Key:      "IMAGE",
+		Value:    fmt.Sprintf("%s:%s", entry.Image.Name, entry.Image.Tag),
+		Override: true,
+	}
+
+	imageName := image.Name(image.NameInput{
+		ServiceName: serviceName,
+		ServiceType: entry.Name,
+	})
+	logger.LogHeader2("Building base image from template")
+	if err := c.buildImage(imageName, containerArgs, entry); err != nil {
+		c.Ui.Error("Failed to build image for service: " + err.Error())
+		return 1
+	}
+
 	envFile := fmt.Sprintf("%s/.env", serviceRoot)
 	envLines := []string{}
 	envConfig := map[string]string{}
@@ -295,29 +318,6 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	if err := os.WriteFile(configFile, data, 0o666); err != nil {
 		c.Ui.Error("Failed to write create settings for service: " + err.Error())
-		return 1
-	}
-
-	// todo: refactor to force-set the IMAGE argument or drop completely
-	if c.imageName != "" {
-		entry.Image.Name = c.imageName
-	}
-	if c.imageTag != "" {
-		entry.Image.Tag = c.imageTag
-	}
-	containerArgs["IMAGE"] = argument.Argument{
-		Key:      "IMAGE",
-		Value:    fmt.Sprintf("%s:%s", entry.Image.Name, entry.Image.Tag),
-		Override: true,
-	}
-
-	imageName := image.Name(image.NameInput{
-		ServiceName: serviceName,
-		ServiceType: entry.Name,
-	})
-	logger.LogHeader2("Building base image from template")
-	if err := c.buildImage(imageName, containerArgs, entry); err != nil {
-		c.Ui.Error("Failed to build image for service: " + err.Error())
 		return 1
 	}
 
