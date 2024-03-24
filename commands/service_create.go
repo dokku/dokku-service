@@ -260,6 +260,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
+	logger.LogHeader2("Writing settings for service")
 	envFile := fmt.Sprintf("%s/.env", serviceRoot)
 	envLines := []string{}
 	envConfig := map[string]string{}
