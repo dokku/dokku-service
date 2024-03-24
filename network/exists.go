@@ -27,7 +27,7 @@ func Exists(ctx context.Context, input ExistsInput) (bool, error) {
 	cmd.PrintCommand = true
 	res, err := cmd.Execute(ctx)
 	if err != nil {
-		return false, fmt.Errorf("check for container existence failed: %w", err)
+		return false, fmt.Errorf("check for network existence failed: %w", err)
 	}
 
 	if res.ExitCode != 0 {
