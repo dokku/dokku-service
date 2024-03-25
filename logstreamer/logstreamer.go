@@ -48,8 +48,7 @@ func (l *Logstreamer) Flush() error {
 		return err
 	}
 
-	l.out(string(p))
-	return nil
+	return l.out(string(p))
 }
 
 func (l *Logstreamer) OutputLines() (err error) {
@@ -62,7 +61,9 @@ func (l *Logstreamer) OutputLines() (err error) {
 			return err
 		}
 
-		l.out(line)
+		if err := l.out(line); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -71,7 +72,7 @@ func (l *Logstreamer) OutputLines() (err error) {
 func (l *Logstreamer) out(str string) (err error) {
 	str = l.prefix + str
 
-	l.writer.Write([]byte(str))
+	_, err = l.writer.Write([]byte(str))
 
-	return nil
+	return err
 }
