@@ -184,6 +184,7 @@ func (c *ServiceDestroyCommand) Run(args []string) int {
 		})
 	}
 
+	// todo: remove any attached volumes
 	removeErr := os.RemoveAll(serviceRoot)
 	if removeErr != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to remove service data: %s", removeErr.Error()))
