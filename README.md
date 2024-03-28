@@ -33,7 +33,7 @@ Status:
 - [x] service-create
 - [ ] service-clone
 - [ ] service-connect
-- [ ] service-destroy
+- [x] service-destroy
 - [ ] service-enter
 - [ ] service-exists
 - [ ] service-export

@@ -9,6 +9,7 @@ import (
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
 
+	"dokku-service/container"
 	"dokku-service/registry"
 )
 
@@ -144,13 +145,55 @@ func (c *ServiceDestroyCommand) Run(args []string) int {
 
 	serviceName := arguments["name"].StringValue()
 	logger.LogHeader1(fmt.Sprintf("Destroying %s service %s", serviceTemplate.Name, serviceName))
-	// check if config exists
-	// check if container exists
 
-	// if config does not exist but container exists, show an error telling users to manually cleanup
+	containerName := container.Name(container.NameInput{
+		ServiceName: serviceName,
+		ServiceType: serviceTemplate.Name,
+	})
+	containerExists, err := container.Exists(c.Context, container.ExistsInput{
+		Name: containerName,
+	})
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Failed to check for container existence: %s", err.Error()))
+		return 1
+	}
 
-	// destroy container
-	// destroy config
+	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, serviceTemplate.Name, serviceName)
+	if _, err := os.Stat(serviceRoot); err != nil {
+		// todo: handle deleting the service container
+		c.Ui.Error(fmt.Sprintf("Failed to check for service data existence: %s", err.Error()))
+		if containerExists {
+			c.Ui.Error(fmt.Sprintf("Please manually cleanup the service container: %s", containerName))
+		}
+
+		return 1
+	}
+
+	var destroyErr error
+	if containerExists {
+		stopErr := container.Stop(c.Context, container.StopInput{
+			Name: containerName,
+		})
+		if stopErr != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to stop service container: %s", stopErr.Error()))
+			return 1
+		}
+
+		destroyErr = container.Destroy(c.Context, container.DestroyInput{
+			Name: containerName,
+		})
+	}
+
+	removeErr := os.RemoveAll(serviceRoot)
+	if removeErr != nil {
+		c.Ui.Error(fmt.Sprintf("Failed to remove service data: %s", removeErr.Error()))
+	}
+	if destroyErr != nil {
+		c.Ui.Error(fmt.Sprintf("Failed to destroy service container: %s", destroyErr.Error()))
+	}
+	if removeErr != nil || destroyErr != nil {
+		return 1
+	}
 
 	return 0
 }
