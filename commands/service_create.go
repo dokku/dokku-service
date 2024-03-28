@@ -423,7 +423,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	container, err := cli.ContainerInspect(context.Background(), containerName)
+	container, err := cli.ContainerInspect(c.Context, containerName)
 	if err != nil {
 		logger.Error(err.Error())
 		return 1
