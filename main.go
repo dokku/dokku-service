@@ -44,6 +44,9 @@ func Commands(ctx context.Context, meta command.Meta) map[string]cli.CommandFact
 		"service-create": func() (cli.Command, error) {
 			return &commands.ServiceCreateCommand{Meta: meta, Context: ctx}, nil
 		},
+		"service-destroy": func() (cli.Command, error) {
+			return &commands.ServiceDestroyCommand{Meta: meta, Context: ctx}, nil
+		},
 		"template-info": func() (cli.Command, error) {
 			return &commands.TemplateInfoCommand{Meta: meta}, nil
 		},

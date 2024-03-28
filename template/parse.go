@@ -1,10 +1,12 @@
 package template
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -91,24 +93,30 @@ func init() {
 	}
 }
 
-func ParseDockerfile(templateName string, templateRegistryPath string) (ServiceTemplate, error) {
-	var reader io.Reader
-	var err error
-	templatePath := templateName
-	vendoredTemplate := true
-	if templateRegistryPath == "" {
-		reader, err = ReadTemplate(filepath.Join(templateName, "Dockerfile"))
-		if err != nil {
-			return ServiceTemplate{}, fmt.Errorf("failed to read Dockerfile: %w", err)
-		}
-	} else {
-		vendoredTemplate = false
-		templatePath := filepath.Join(templateRegistryPath, templateName)
-		reader, err = ReadDockerfile(filepath.Join(templatePath, "Dockerfile"))
-		if err != nil {
-			return ServiceTemplate{}, fmt.Errorf("failed to read template: %w", err)
-		}
+type NewServiceTemplateInput struct {
+	Name             string
+	RegistryPath     string
+	VendoredRegistry bool
+}
+
+func NewServiceTemplate(ctx context.Context, input NewServiceTemplateInput) (ServiceTemplate, error) {
+	template, err := ParseDockerfile(ctx, input)
+	if err != nil {
+		return ServiceTemplate{}, fmt.Errorf("failed to parse Dockerfile: %w", err)
 	}
+
+	return template, nil
+}
+
+func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (ServiceTemplate, error) {
+	templatePath := filepath.Join(input.RegistryPath, input.Name)
+
+	b, err := os.ReadFile(filepath.Join(templatePath, "Dockerfile"))
+	if err != nil {
+		return ServiceTemplate{}, fmt.Errorf("failed to read Dockerfile: %w", err)
+	}
+
+	reader := bytes.NewReader(b)
 
 	commands, err := dockerfile.ParseReader(reader)
 	if err != nil {
@@ -209,7 +217,7 @@ func ParseDockerfile(templateName string, templateRegistryPath string) (ServiceT
 		Image:            image,
 		Description:      description,
 		TemplatePath:     templatePath,
-		VendoredTemplate: vendoredTemplate,
+		VendoredTemplate: input.VendoredRegistry,
 		Arguments:        arguments,
 		Ports: ServicePorts{
 			Expose: exposePorts,

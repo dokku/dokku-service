@@ -2,11 +2,6 @@ package commands
 
 import (
 	"context"
-	"dokku-service/container"
-	"dokku-service/healthcheck"
-	"dokku-service/network"
-	"dokku-service/template"
-	"dokku-service/volume"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,8 +14,14 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"dokku-service/argument"
+	"dokku-service/container"
+	"dokku-service/healthcheck"
 	"dokku-service/hook"
 	"dokku-service/image"
+	"dokku-service/network"
+	"dokku-service/registry"
+	"dokku-service/template"
+	"dokku-service/volume"
 )
 
 const DATA_ROOT = "/tmp"
@@ -79,8 +80,8 @@ type ServiceCreateCommand struct {
 	// postStartNetwork specifies the network to attach to the container after start
 	postStartNetwork []string
 
-	// templatePath specifies an override path to the template
-	templatePath string
+	// registryPath specifies an override path to the registry
+	registryPath string
 
 	// useVolumes specifies whether to use volumes or directories for service data
 	useVolumes bool
@@ -141,7 +142,7 @@ func (c *ServiceCreateCommand) FlagSet() *flag.FlagSet {
 	f.StringArrayVar(&c.imageBuildFlags, "image-build-flags", []string{}, "flags to pass to the image build command")
 	f.StringSliceVar(&c.postCreateNetwork, "post-create-network", []string{}, "network to attach to the container after creation")
 	f.StringSliceVar(&c.postStartNetwork, "post-start-network", []string{}, "network to attach to the container after start")
-	f.StringVar(&c.templatePath, "template-path", "", "an override path to the template")
+	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
 	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }
@@ -175,42 +176,52 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 1
 	}
 
-	templateName := arguments["template"].StringValue()
 	serviceName := arguments["name"].StringValue()
 
-	// todo: ensure the service doesn't exist at the specified path
+	registryPath := c.registryPath
+	vendoredRegistry := false
+	if c.registryPath == "" {
+		dir, err := os.MkdirTemp("", "dokku-service-registry-*")
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to create temporary directory: %s", err.Error()))
+			return 1
+		}
+		defer os.RemoveAll(dir)
 
-	logger.LogHeader1(fmt.Sprintf("Creating %s service %s", templateName, serviceName))
-
-	logger.LogHeader2(fmt.Sprintf("Validating template %s", templateName))
-	entry, err := template.ParseDockerfile(templateName, c.templatePath)
+		if _, err := registry.NewVendoredRegistry(c.Context, dir); err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to create vendored registry: %s", err.Error()))
+			return 1
+		}
+		registryPath = dir
+		vendoredRegistry = true
+	}
+	templateRegistry, err := registry.NewRegistry(c.Context, registry.NewRegistryInput{
+		RegistryPath: registryPath,
+		Vendored:     vendoredRegistry,
+	})
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
+		c.Ui.Error(fmt.Sprintf("Failed to parse registry: %s", err.Error()))
 		return 1
 	}
 
-	templatePath := c.templatePath
-	if c.templatePath == "" {
-		templatePath, err = os.MkdirTemp("", "dokku-service")
-		if err != nil {
-			c.Ui.Error("Failed to create temporary directory: " + err.Error())
-			return 1
-		}
-		defer os.RemoveAll(templatePath)
-
-		if err := template.ExtractTemplate(entry, templatePath); err != nil {
-			c.Ui.Error("Failed to extract template: " + err.Error())
-			return 1
-		}
+	templateName := arguments["template"].StringValue()
+	serviceTemplate, ok := templateRegistry.Templates[templateName]
+	if !ok {
+		c.Ui.Error(fmt.Sprintf("Template %s not found", templateName))
+		return 1
 	}
+
+	// todo: ensure the service doesn't exist at the specified path
+
+	logger.LogHeader1(fmt.Sprintf("Creating %s service %s", serviceTemplate.Name, serviceName))
 
 	containerName := container.Name(container.NameInput{
 		ServiceName: serviceName,
-		ServiceType: entry.Name,
+		ServiceType: serviceTemplate.Name,
 	})
 	networkAlias := network.Alias(network.AliasInput{
 		ServiceName: serviceName,
-		ServiceType: entry.Name,
+		ServiceType: serviceTemplate.Name,
 	})
 	ok, err = c.containerExists(containerName)
 	if err != nil {
@@ -246,13 +257,13 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		}
 	}
 
-	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, entry.Name, serviceName)
+	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, serviceTemplate.Name, serviceName)
 	if _, err := os.Stat(serviceRoot); err != nil && !errors.Is(err, os.ErrNotExist) {
 		c.Ui.Error("Service directory already exists but container is not running")
 		return 3
 	}
 
-	containerArgs, err := c.collectContainerArgs(entry)
+	containerArgs, err := c.collectContainerArgs(serviceTemplate)
 	if err != nil {
 		c.Ui.Error("Failed to collect arguments for service: " + err.Error())
 		return 1
@@ -260,23 +271,23 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	// todo: refactor to force-set the IMAGE argument or drop completely
 	if c.imageName != "" {
-		entry.Image.Name = c.imageName
+		serviceTemplate.Image.Name = c.imageName
 	}
 	if c.imageTag != "" {
-		entry.Image.Tag = c.imageTag
+		serviceTemplate.Image.Tag = c.imageTag
 	}
 	containerArgs["IMAGE"] = argument.Argument{
 		Key:      "IMAGE",
-		Value:    fmt.Sprintf("%s:%s", entry.Image.Name, entry.Image.Tag),
+		Value:    fmt.Sprintf("%s:%s", serviceTemplate.Image.Name, serviceTemplate.Image.Tag),
 		Override: true,
 	}
 
 	imageName := image.Name(image.NameInput{
 		ServiceName: serviceName,
-		ServiceType: entry.Name,
+		ServiceType: serviceTemplate.Name,
 	})
 	logger.LogHeader2("Building base image from template")
-	if err := c.buildImage(imageName, containerArgs, entry, templatePath); err != nil {
+	if err := c.buildImage(imageName, containerArgs, serviceTemplate); err != nil {
 		c.Ui.Error("Failed to build image for service: " + err.Error())
 		return 1
 	}
@@ -300,7 +311,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		envLines = append(envLines, fmt.Sprintf(`%s=%s`, key, value))
 	}
 
-	if err := os.MkdirAll(fmt.Sprintf("%s/%s", c.dataRoot, entry.Name), os.ModePerm); err != nil {
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s", c.dataRoot, serviceTemplate.Name), os.ModePerm); err != nil {
 		c.Ui.Error("Failed to create service directory: " + err.Error())
 		return 1
 	}
@@ -330,7 +341,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 			ServiceRoot:     serviceRoot,
 			UseVolumes:      c.useVolumes,
 		},
-		Template: entry,
+		Template: serviceTemplate,
 	}
 	data, err := json.MarshalIndent(createConfig, "", "  ")
 	if err != nil {
@@ -346,8 +357,8 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	// todo: ensure volumes dont exist
 	logger.LogHeader2("Creating volumes")
 	var createdVolumes []volume.Volume
-	for _, volumeDescriptor := range entry.Volumes {
-		volume, err := c.createVolume(serviceName, entry, volumeDescriptor)
+	for _, volumeDescriptor := range serviceTemplate.Volumes {
+		volume, err := c.createVolume(serviceName, serviceTemplate, volumeDescriptor)
 		if err != nil {
 			c.Ui.Error("Failed to run volume for service: " + err.Error())
 			return 1
@@ -357,7 +368,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	logger.LogHeader2("Executing pre-create hook")
-	if err := c.executeHook("pre-create", entry.Hooks.PreCreate, serviceName, createdVolumes, entry, templatePath); err != nil {
+	if err := c.executeHook("pre-create", serviceTemplate.Hooks.PreCreate, serviceName, createdVolumes, serviceTemplate); err != nil {
 		c.Ui.Error("Failed to execute pre-create hook for service: " + err.Error())
 		return 1
 	}
@@ -391,7 +402,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	// todo: attach container to container-specific network
 	logger.LogHeader2("Executing post-create hook")
-	if err := c.executeHook("post-create", entry.Hooks.PostCreate, serviceName, createdVolumes, entry, templatePath); err != nil {
+	if err := c.executeHook("post-create", serviceTemplate.Hooks.PostCreate, serviceName, createdVolumes, serviceTemplate); err != nil {
 		c.Ui.Error("Failed to execute post-create hook for service: " + err.Error())
 		return 1
 	}
@@ -421,7 +432,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		Container:    container,
 		NetworkAlias: networkAlias,
 		Timeout:      5,
-		Ports:        entry.Ports.Wait,
+		Ports:        serviceTemplate.Ports.Wait,
 		Wait:         1,
 	}); err != nil {
 		c.Ui.Error("Failed to wait for service to be ready: " + err.Error())
@@ -441,7 +452,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	logger.LogHeader2("Executing post-start hook")
-	if err := c.executeHook("post-start", entry.Hooks.PostStart, serviceName, createdVolumes, entry, templatePath); err != nil {
+	if err := c.executeHook("post-start", serviceTemplate.Hooks.PostStart, serviceName, createdVolumes, serviceTemplate); err != nil {
 		c.Ui.Error("Failed to execute post-start hook for service: " + err.Error())
 		return 1
 	}
@@ -455,25 +466,23 @@ func (c *ServiceCreateCommand) containerExists(containerName string) (bool, erro
 	})
 }
 
-func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[string]argument.Argument, template template.ServiceTemplate, templatePath string) error {
+func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[string]argument.Argument, template template.ServiceTemplate) error {
 	return image.Build(c.Context, image.BuildInput{
-		Arguments:    containerArgs,
-		BuildFlags:   c.imageBuildFlags,
-		Name:         imageName,
-		Template:     template,
-		TemplatePath: templatePath,
+		Arguments:  containerArgs,
+		BuildFlags: c.imageBuildFlags,
+		Name:       imageName,
+		Template:   template,
 	})
 }
 
-func (c *ServiceCreateCommand) executeHook(name string, hookExists bool, serviceName string, volumes []volume.Volume, template template.ServiceTemplate, templatePath string) error {
+func (c *ServiceCreateCommand) executeHook(name string, hookExists bool, serviceName string, volumes []volume.Volume, template template.ServiceTemplate) error {
 	return hook.Execute(c.Context, hook.ExecuteInput{
-		DataRoot:     c.dataRoot,
-		Exists:       hookExists,
-		Name:         name,
-		ServiceName:  serviceName,
-		Template:     template,
-		TemplatePath: templatePath,
-		Volumes:      volumes,
+		DataRoot:    c.dataRoot,
+		Exists:      hookExists,
+		Name:        name,
+		ServiceName: serviceName,
+		Template:    template,
+		Volumes:     volumes,
 	})
 }
 

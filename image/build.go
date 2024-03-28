@@ -2,9 +2,6 @@ package image
 
 import (
 	"context"
-	"dokku-service/argument"
-	"dokku-service/logstreamer"
-	"dokku-service/template"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +9,11 @@ import (
 	"sync"
 
 	"github.com/alexellis/go-execute/v2"
+
+	"dokku-service/argument"
+	"dokku-service/logstreamer"
+	"dokku-service/registry"
+	"dokku-service/template"
 )
 
 // BuildInput contains the input parameters for the Build function
@@ -25,16 +27,15 @@ type BuildInput struct {
 	// Name of the image to build
 	Name string
 
+	Registry registry.Registry
+
 	// Template to use for building the image
 	Template template.ServiceTemplate
-
-	// TemplatePath specifies the path to the template
-	TemplatePath string
 }
 
 // Build builds a Docker image
 func Build(ctx context.Context, input BuildInput) error {
-	dockerfilePath := filepath.Join(input.TemplatePath, "Dockerfile")
+	dockerfilePath := filepath.Join(input.Template.TemplatePath, "Dockerfile")
 	cmdArgs := []string{
 		"image", "build",
 		"-f", dockerfilePath,
@@ -54,7 +55,7 @@ func Build(ctx context.Context, input BuildInput) error {
 		cmdArgs = append(cmdArgs, "--"+flag)
 	}
 
-	cmdArgs = append(cmdArgs, input.TemplatePath)
+	cmdArgs = append(cmdArgs, input.Template.TemplatePath)
 
 	var mu sync.Mutex
 	cmd := execute.ExecTask{

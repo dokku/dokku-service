@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -11,33 +12,42 @@ import (
 	"dokku-service/registry"
 )
 
-type TemplateInfoCommand struct {
+type ServiceDestroyCommand struct {
 	command.Meta
 
-	// registryPath specifies an override path to the template registry
+	// Context specifies the context to use
+	Context context.Context
+
+	// dataRoot specifies the root directory for service data
+	dataRoot string
+
+	// registryPath specifies an override path to the registry
 	registryPath string
+
+	// useVolumes specifies whether to use volumes or directories for service data
+	useVolumes bool
 }
 
-func (c *TemplateInfoCommand) Name() string {
-	return "template-info"
+func (c *ServiceDestroyCommand) Name() string {
+	return "service-destroy"
 }
 
-func (c *TemplateInfoCommand) Synopsis() string {
-	return "template-info command"
+func (c *ServiceDestroyCommand) Synopsis() string {
+	return "Service destroy command"
 }
 
-func (c *TemplateInfoCommand) Help() string {
+func (c *ServiceDestroyCommand) Help() string {
 	return command.CommandHelp(c)
 }
 
-func (c *TemplateInfoCommand) Examples() map[string]string {
+func (c *ServiceDestroyCommand) Examples() map[string]string {
 	appName := os.Getenv("CLI_APP_NAME")
 	return map[string]string{
-		"Show info about template": fmt.Sprintf("%s %s", appName, c.Name()),
+		"Does nothing": fmt.Sprintf("%s %s", appName, c.Name()),
 	}
 }
 
-func (c *TemplateInfoCommand) Arguments() []command.Argument {
+func (c *ServiceDestroyCommand) Arguments() []command.Argument {
 	args := []command.Argument{}
 	args = append(args, command.Argument{
 		Name:        "template",
@@ -45,31 +55,39 @@ func (c *TemplateInfoCommand) Arguments() []command.Argument {
 		Optional:    false,
 		Type:        command.ArgumentString,
 	})
+	args = append(args, command.Argument{
+		Name:        "name",
+		Description: "the name of the created service",
+		Optional:    false,
+		Type:        command.ArgumentString,
+	})
 	return args
 }
 
-func (c *TemplateInfoCommand) AutocompleteArgs() complete.Predictor {
+func (c *ServiceDestroyCommand) AutocompleteArgs() complete.Predictor {
 	return complete.PredictNothing
 }
 
-func (c *TemplateInfoCommand) ParsedArguments(args []string) (map[string]command.Argument, error) {
+func (c *ServiceDestroyCommand) ParsedArguments(args []string) (map[string]command.Argument, error) {
 	return command.ParseArguments(args, c.Arguments())
 }
 
-func (c *TemplateInfoCommand) FlagSet() *flag.FlagSet {
+func (c *ServiceDestroyCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
-	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the template registry")
+	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
+	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
+	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }
 
-func (c *TemplateInfoCommand) AutocompleteFlags() complete.Flags {
+func (c *ServiceDestroyCommand) AutocompleteFlags() complete.Flags {
 	return command.MergeAutocompleteFlags(
 		c.Meta.AutocompleteFlags(command.FlagSetClient),
 		complete.Flags{},
 	)
 }
 
-func (c *TemplateInfoCommand) Run(args []string) int {
+func (c *ServiceDestroyCommand) Run(args []string) int {
 	flags := c.FlagSet()
 	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -124,26 +142,15 @@ func (c *TemplateInfoCommand) Run(args []string) int {
 		return 1
 	}
 
-	logger.LogHeader1(fmt.Sprintf("%s info", serviceTemplate.Name))
+	serviceName := arguments["name"].StringValue()
+	logger.LogHeader1(fmt.Sprintf("Destroying %s service %s", serviceTemplate.Name, serviceName))
+	// check if config exists
+	// check if container exists
 
-	c.Ui.Info(fmt.Sprintf("name: %s", serviceTemplate.Name))
-	c.Ui.Info(fmt.Sprintf("description: %s", serviceTemplate.Description))
-	c.Ui.Info("arguments:")
-	for _, argument := range serviceTemplate.Arguments {
-		defaultValue := ""
-		isRequired := false
-		if argument.Value == "" {
-			defaultValue = "none"
-			isRequired = true
-		}
-		if argument.IsVariable {
-			defaultValue = "generated on create"
-		} else if argument.Value != "" {
-			defaultValue = fmt.Sprintf(`"%s"`, argument.Value)
-		}
+	// if config does not exist but container exists, show an error telling users to manually cleanup
 
-		c.Ui.Info(fmt.Sprintf("- %s [default: %v, required: %v]", argument.Name, defaultValue, isRequired))
-	}
+	// destroy container
+	// destroy config
 
 	return 0
 }

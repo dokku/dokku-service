@@ -30,9 +30,6 @@ type ExecuteInput struct {
 	// Template to use for executing the hook
 	Template template.ServiceTemplate
 
-	// TemplatePath specifies the path to the template
-	TemplatePath string
-
 	// Volumes specifies the volumes to use when executing the hook
 	Volumes []volume.Volume
 }
@@ -44,7 +41,7 @@ func Execute(ctx context.Context, input ExecuteInput) error {
 	}
 
 	// todo: support a library for templates
-	hookPath := filepath.Join(input.TemplatePath, "bin", input.Name)
+	hookPath := filepath.Join(input.Template.TemplatePath, "bin", input.Name)
 	hookPath, err := filepath.Abs(hookPath)
 	if err != nil {
 		return fmt.Errorf("deriving absolute path to %s hook failed: %w", input.Name, err)

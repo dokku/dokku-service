@@ -1,20 +1,21 @@
 package commands
 
 import (
-	"dokku-service/template"
 	"fmt"
 	"os"
 
 	"github.com/josegonzalez/cli-skeleton/command"
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
+
+	"dokku-service/registry"
 )
 
 type TemplateListCommand struct {
 	command.Meta
 
-	// templatePath specifies an override path to the template
-	templatePath string
+	// registryPath specifies an override path to the registry
+	registryPath string
 }
 
 func (c *TemplateListCommand) Name() string {
@@ -51,7 +52,7 @@ func (c *TemplateListCommand) ParsedArguments(args []string) (map[string]command
 
 func (c *TemplateListCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
-	f.StringVar(&c.templatePath, "template-path", "", "an override path to the template")
+	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
 	return f
 }
 
@@ -77,27 +78,41 @@ func (c *TemplateListCommand) Run(args []string) int {
 		c.Ui.Error(command.CommandErrorText(c))
 		return 1
 	}
-
-	dirEntries, err := template.ReadDir("")
-	if err != nil {
-		c.Ui.Error(err.Error())
-		return 1
-	}
-
 	logger, ok := c.Ui.(*command.ZerologUi)
 	if !ok {
 		c.Ui.Error("Unable to fetch logger from cli")
 		return 1
 	}
 
-	logger.LogHeader1("Templates")
-	for _, dirEntry := range dirEntries {
-		entry, err := template.ParseDockerfile(dirEntry.Name(), c.templatePath)
+	registryPath := c.registryPath
+	vendoredRegistry := false
+	if c.registryPath == "" {
+		dir, err := os.MkdirTemp("", "dokku-service-registry-*")
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
-			continue
+			c.Ui.Error(fmt.Sprintf("Failed to create temporary directory: %s", err.Error()))
+			return 1
 		}
-		c.Ui.Info(fmt.Sprintf("%s: %s", entry.Name, entry.Description))
+		defer os.RemoveAll(dir)
+
+		if _, err := registry.NewVendoredRegistry(c.Context, dir); err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to create vendored registry: %s", err.Error()))
+			return 1
+		}
+		registryPath = dir
+		vendoredRegistry = true
+	}
+	templateRegistry, err := registry.NewRegistry(c.Context, registry.NewRegistryInput{
+		RegistryPath: registryPath,
+		Vendored:     vendoredRegistry,
+	})
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Failed to parse registry: %s", err.Error()))
+		return 1
+	}
+
+	logger.LogHeader1("Templates")
+	for _, serviceTemplate := range templateRegistry.Templates {
+		c.Ui.Info(fmt.Sprintf("%s: %s", serviceTemplate.Name, serviceTemplate.Description))
 	}
 
 	return 0
