@@ -6,6 +6,7 @@ VOLUME /data
 LABEL com.dokku.template.name=redis
 LABEL com.dokku.template.description="A template for managing redis"
 LABEL com.dokku.template.config.commands.connect="redis-cli"
+LABEL com.dokku.template.config.commands.enter="/bin/sh"
 LABEL com.dokku.template.config.hooks.pre-create=true
 LABEL com.dokku.template.config.hooks.image=bash:5.2
 LABEL com.dokku.template.config.ports.expose=6379

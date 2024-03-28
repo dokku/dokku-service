@@ -22,6 +22,7 @@ const (
 	LABEL_NAME                     Label = "com.dokku.template.name"
 	LABEL_DESCRIPTION              Label = "com.dokku.template.description"
 	LABEL_CONFIG_COMMANDS_CONNECT  Label = "com.dokku.template.config.commands.connect"
+	LABEL_CONFIG_COMMANDS_ENTER    Label = "com.dokku.template.config.commands.enter"
 	LABEL_CONFIG_COMMANDS_EXPORT   Label = "com.dokku.template.config.commands.export"
 	LABEL_CONFIG_COMMANDS_IMPORT   Label = "com.dokku.template.config.commands.import"
 	LABEL_CONFIG_HOOKS_IMAGE       Label = "com.dokku.template.config.hooks.image"
@@ -83,6 +84,7 @@ func init() {
 		LABEL_NAME:                     true,
 		LABEL_DESCRIPTION:              true,
 		LABEL_CONFIG_COMMANDS_CONNECT:  true,
+		LABEL_CONFIG_COMMANDS_ENTER:    true,
 		LABEL_CONFIG_COMMANDS_EXPORT:   true,
 		LABEL_CONFIG_COMMANDS_IMPORT:   true,
 		LABEL_CONFIG_HOOKS_IMAGE:       true,
@@ -212,6 +214,20 @@ func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (Servic
 		exposePorts = append(exposePorts, p)
 	}
 
+	serviceCommands := map[string]string{}
+	commandLabels := map[Label]string{
+		LABEL_CONFIG_COMMANDS_CONNECT: "connect",
+		LABEL_CONFIG_COMMANDS_ENTER:   "enter",
+		LABEL_CONFIG_COMMANDS_EXPORT:  "export",
+		LABEL_CONFIG_COMMANDS_IMPORT:  "import",
+	}
+	for label, commandName := range commandLabels {
+		command, _ := getLabelValue(commands, label)
+		if command != "" {
+			serviceCommands[commandName] = command
+		}
+	}
+
 	template := ServiceTemplate{
 		Name:             name,
 		Image:            image,
@@ -219,6 +235,7 @@ func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (Servic
 		TemplatePath:     templatePath,
 		VendoredTemplate: input.VendoredRegistry,
 		Arguments:        arguments,
+		Commands:         serviceCommands,
 		Ports: ServicePorts{
 			Expose: exposePorts,
 			Wait:   waitPorts,

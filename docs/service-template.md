@@ -59,6 +59,7 @@ The following labels are required:
 The following labels are used to define special commands to interact with the services. Label values are templated via golang templates, and variables defined in the runtime environment are available in the template call.
 
 - `com.dokku.template.config.commands.connect`: A command to execute when connecting to a service container.
+- `com.dokku.template.config.commands.enter`: The default command to execute for entering a container
 - `com.dokku.template.config.commands.export`: A command to execute that exports data from the datastore. Exported data should be output in a format that is consumable by the associated import command. Exported data should be written to `STDOUT`.
 - `com.dokku.template.config.commands.import`: A command to execute that imports data into the datastore. Imported data is provided on `STDIN`.
 
