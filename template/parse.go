@@ -33,13 +33,14 @@ const (
 type ServiceTemplate struct {
 	Name              string            `json:"name"`
 	Image             ServiceImage      `json:"image"`
-	Path              string            `json:"path"`
 	DockerfilePath    string            `json:"dockerfile_path"`
 	Description       string            `json:"description"`
 	Arguments         []Argument        `json:"arguments"`
 	Hooks             ServiceHooks      `json:"hooks"`
 	ExportedVariables map[string]string `json:"exported_variables"`
 	Commands          map[string]string `json:"commands"`
+	TemplatePath      string            `json:"path"`
+	VendoredTemplate  bool              `json:"vendored_template"`
 	Ports             ServicePorts      `json:"ports"`
 	Volumes           []Volume          `json:"volumes"`
 }
@@ -90,18 +91,20 @@ func init() {
 	}
 }
 
-func ParseDockerfile(path string, templateOverridePath string) (ServiceTemplate, error) {
-	dockerfilePath := filepath.Join(path, "Dockerfile")
+func ParseDockerfile(templateName string, templateRegistryPath string) (ServiceTemplate, error) {
 	var reader io.Reader
 	var err error
-	if templateOverridePath == "" {
-		reader, err = ReadTemplate(dockerfilePath)
+	templatePath := templateName
+	vendoredTemplate := true
+	if templateRegistryPath == "" {
+		reader, err = ReadTemplate(filepath.Join(templateName, "Dockerfile"))
 		if err != nil {
 			return ServiceTemplate{}, fmt.Errorf("failed to read Dockerfile: %w", err)
 		}
 	} else {
-		dockerfilePath = filepath.Join(templateOverridePath, "Dockerfile")
-		reader, err = ReadDockerfile(templateOverridePath)
+		vendoredTemplate = false
+		templatePath := filepath.Join(templateRegistryPath, templateName)
+		reader, err = ReadDockerfile(filepath.Join(templatePath, "Dockerfile"))
 		if err != nil {
 			return ServiceTemplate{}, fmt.Errorf("failed to read template: %w", err)
 		}
@@ -202,12 +205,12 @@ func ParseDockerfile(path string, templateOverridePath string) (ServiceTemplate,
 	}
 
 	template := ServiceTemplate{
-		Name:           name,
-		Image:          image,
-		Description:    description,
-		DockerfilePath: dockerfilePath,
-		Path:           path,
-		Arguments:      arguments,
+		Name:             name,
+		Image:            image,
+		Description:      description,
+		TemplatePath:     templatePath,
+		VendoredTemplate: vendoredTemplate,
+		Arguments:        arguments,
 		Ports: ServicePorts{
 			Expose: exposePorts,
 			Wait:   waitPorts,
