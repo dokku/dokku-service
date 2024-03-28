@@ -13,8 +13,8 @@ import (
 type TemplateInfoCommand struct {
 	command.Meta
 
-	// templatePath specifies an override path to the template
-	templatePath string
+	// registryPath specifies an override path to the template registry
+	registryPath string
 }
 
 func (c *TemplateInfoCommand) Name() string {
@@ -57,7 +57,7 @@ func (c *TemplateInfoCommand) ParsedArguments(args []string) (map[string]command
 
 func (c *TemplateInfoCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
-	f.StringVar(&c.templatePath, "template-path", "", "an override path to the template")
+	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the template registry")
 	return f
 }
 
@@ -92,7 +92,7 @@ func (c *TemplateInfoCommand) Run(args []string) int {
 
 	templateName := arguments["template"].StringValue()
 	logger.LogHeader1(fmt.Sprintf("%s info", templateName))
-	entry, err := template.ParseDockerfile(templateName, c.templatePath)
+	entry, err := template.ParseDockerfile(templateName, c.registryPath)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Template parse failure: %s", err.Error()))
 		return 1
