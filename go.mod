@@ -9,7 +9,7 @@ require (
 	github.com/alexellis/go-execute/v2 v2.2.1
 	github.com/asottile/dockerfile v3.1.0+incompatible
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/docker/docker v26.0.0+incompatible
+	github.com/docker/docker v26.0.1+incompatible
 	github.com/gosimple/slug v1.14.0
 	github.com/josegonzalez/cli-skeleton v0.16.0
 	github.com/mitchellh/cli v1.1.5
@@ -17,6 +17,7 @@ require (
 	github.com/posener/complete v1.2.3
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/sync v0.6.0
+	golang.org/x/term v0.17.0
 	mvdan.cc/sh/v3 v3.8.0
 )
 
@@ -65,7 +66,6 @@ require (
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
-	golang.org/x/term v0.17.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
