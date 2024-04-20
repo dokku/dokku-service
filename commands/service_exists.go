@@ -124,14 +124,14 @@ func (c *ServiceExistsCommand) Run(args []string) int {
 	}
 
 	serviceName := arguments["name"].StringValue()
-	exists := service.Exists(c.Context, service.ExistsInput{
+	exists, err := service.Exists(c.Context, service.ExistsInput{
 		DataRoot:    c.dataRoot,
 		Name:        serviceName,
 		Registry:    templateRegistry,
 		ServiceType: serviceTemplate.Name,
 	})
 	if !exists {
-		c.Ui.Error(fmt.Sprintf("%s service %s does not exist", templateName, serviceName))
+		c.Ui.Error(fmt.Sprintf("%s service %s does not exist: %s", templateName, serviceName, err.Error()))
 		return 1
 	}
 
