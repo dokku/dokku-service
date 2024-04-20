@@ -21,6 +21,9 @@ type ServiceListCommand struct {
 
 	// registryPath specifies an override path to the registry
 	registryPath string
+
+	// trace specifies whether to output trace information
+	trace bool
 }
 
 func (c *ServiceListCommand) Name() string {

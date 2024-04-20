@@ -14,6 +14,9 @@ import (
 type DestroyInput struct {
 	// Name of the container to destroy
 	Name string
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Destroy destroys a container
@@ -36,7 +39,7 @@ func Destroy(ctx context.Context, input DestroyInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to destroy container: %w", err)

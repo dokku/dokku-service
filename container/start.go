@@ -14,6 +14,9 @@ import (
 type StartInput struct {
 	// Name of the container to start
 	Name string
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Start starts a container
@@ -33,7 +36,7 @@ func Start(ctx context.Context, input StartInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("container start for service failed: %w", err)

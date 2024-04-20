@@ -17,6 +17,9 @@ type ConnectInput struct {
 
 	// NetworkName is the name of the network to connect to
 	NetworkName string
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Connect connects a container to a network
@@ -32,7 +35,7 @@ func Connect(ctx context.Context, input ConnectInput) error {
 		StreamStdio: false,
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("network connect failed: %w", err)

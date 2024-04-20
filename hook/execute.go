@@ -30,6 +30,9 @@ type ExecuteInput struct {
 	// Template to use for executing the hook
 	Template template.ServiceTemplate
 
+	// Trace controls whether to print the command being executed
+	Trace bool
+
 	// Volumes specifies the volumes to use when executing the hook
 	Volumes []volume.Volume
 }
@@ -84,7 +87,7 @@ func Execute(ctx context.Context, input ExecuteInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("%s hook container for service failed: %w", input.Name, err)

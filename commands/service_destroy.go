@@ -24,6 +24,9 @@ type ServiceDestroyCommand struct {
 	// registryPath specifies an override path to the registry
 	registryPath string
 
+	// trace specifies whether to output trace information
+	trace bool
+
 	// useVolumes specifies whether to use volumes or directories for service data
 	useVolumes bool
 }
@@ -131,7 +134,8 @@ func (c *ServiceDestroyCommand) Run(args []string) int {
 		ServiceType: serviceTemplate.Name,
 	})
 	containerExists, err := container.Exists(c.Context, container.ExistsInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to check for container existence: %s", err.Error()))
@@ -152,7 +156,8 @@ func (c *ServiceDestroyCommand) Run(args []string) int {
 	var destroyErr error
 	if containerExists {
 		stopErr := container.Stop(c.Context, container.StopInput{
-			Name: containerName,
+			Name:  containerName,
+			Trace: c.trace,
 		})
 		if stopErr != nil {
 			c.Ui.Error(fmt.Sprintf("Failed to stop service container: %s", stopErr.Error()))
@@ -160,7 +165,8 @@ func (c *ServiceDestroyCommand) Run(args []string) int {
 		}
 
 		destroyErr = container.Destroy(c.Context, container.DestroyInput{
-			Name: containerName,
+			Name:  containerName,
+			Trace: c.trace,
 		})
 	}
 

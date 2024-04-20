@@ -11,6 +11,9 @@ import (
 type ExistsInput struct {
 	// Name of the container to check for existence
 	Name string
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Exists checks if a container exists
@@ -24,7 +27,7 @@ func Exists(ctx context.Context, input ExistsInput) (bool, error) {
 		StreamStdio: false,
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return false, fmt.Errorf("check for container existence failed: %w", err)

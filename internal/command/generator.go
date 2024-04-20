@@ -42,6 +42,9 @@ type {{ .Name | camelcase }}Command struct {
 
 	// registryPath specifies an override path to the registry
 	registryPath string
+
+	// trace specifies whether to output trace information
+	trace bool
 }
 
 func (c *{{ .Name | camelcase }}Command) Name() string {
@@ -90,6 +93,7 @@ func (c *{{ .Name | camelcase }}Command) ParsedArguments(args []string) (map[str
 
 func (c *{{ .Name | camelcase }}Command) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
+	f.BoolVar(&c.trace, "trace", false, "output trace information")
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
 	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
 	return f
@@ -145,6 +149,7 @@ func (c *{{ .Name | camelcase }}Command) Run(args []string) int {
 	})
 	containerExists, err := container.Exists(c.Context, container.ExistsInput{
 		Name: containerName,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to check for container existence: %s", err.Error()))

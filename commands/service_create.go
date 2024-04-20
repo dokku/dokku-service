@@ -82,6 +82,9 @@ type ServiceCreateCommand struct {
 	// registryPath specifies an override path to the registry
 	registryPath string
 
+	// trace specifies whether to output trace information
+	trace bool
+
 	// useVolumes specifies whether to use volumes or directories for service data
 	useVolumes bool
 }
@@ -215,7 +218,10 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 	// todo: improve logging
 	for _, networkName := range c.postCreateNetwork {
-		ok, err = network.Exists(c.Context, network.ExistsInput{Name: networkName})
+		ok, err = network.Exists(c.Context, network.ExistsInput{
+			Name:  networkName,
+			Trace: c.trace,
+		})
 		if err != nil {
 			c.Ui.Error("Failed to check for network existence: " + err.Error())
 			return 1
@@ -227,7 +233,10 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	for _, networkName := range c.postStartNetwork {
-		ok, err = network.Exists(c.Context, network.ExistsInput{Name: networkName})
+		ok, err = network.Exists(c.Context, network.ExistsInput{
+			Name:  networkName,
+			Trace: c.trace,
+		})
 		if err != nil {
 			c.Ui.Error("Failed to check for network existence: " + err.Error())
 		}
@@ -360,8 +369,9 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		EnvFile:       envFile,
 		ImageName:     imageName,
 		ServiceRoot:   serviceRoot,
-		Volumes:       createdVolumes,
+		Trace:         c.trace,
 		UseVolumes:    c.useVolumes,
+		Volumes:       createdVolumes,
 	})
 	if err != nil {
 		c.Ui.Error("Failed to create container for service: " + err.Error())
@@ -374,6 +384,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 			ContainerName: containerName,
 			NetworkAlias:  networkAlias,
 			NetworkName:   networkName,
+			Trace:         c.trace,
 		}); err != nil {
 			c.Ui.Error("Failed to attach container to network: " + err.Error())
 			return 1
@@ -411,8 +422,9 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	if err := healthcheck.ListeningCheck(c.Context, healthcheck.ListeningCheckInput{
 		Container:    container,
 		NetworkAlias: networkAlias,
-		Timeout:      5,
 		Ports:        serviceTemplate.Ports.Wait,
+		Timeout:      5,
+		Trace:        c.trace,
 		Wait:         1,
 	}); err != nil {
 		c.Ui.Error("Failed to wait for service to be ready: " + err.Error())
@@ -425,6 +437,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 			ContainerName: containerName,
 			NetworkAlias:  networkAlias,
 			NetworkName:   networkName,
+			Trace:         c.trace,
 		}); err != nil {
 			c.Ui.Error("Failed to attach container to network: " + err.Error())
 			return 1
@@ -442,7 +455,8 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 
 func (c *ServiceCreateCommand) containerExists(containerName string) (bool, error) {
 	return container.Exists(c.Context, container.ExistsInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 }
 
@@ -452,6 +466,7 @@ func (c *ServiceCreateCommand) buildImage(imageName string, containerArgs map[st
 		BuildFlags: c.imageBuildFlags,
 		Name:       imageName,
 		Template:   template,
+		Trace:      c.trace,
 	})
 }
 
@@ -463,12 +478,14 @@ func (c *ServiceCreateCommand) executeHook(name string, hookExists bool, service
 		ServiceName: serviceName,
 		Template:    template,
 		Volumes:     volumes,
+		Trace:       c.trace,
 	})
 }
 
 func (c *ServiceCreateCommand) startContainer(containerName string) error {
 	return container.Start(c.Context, container.StartInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 }
 
@@ -477,8 +494,9 @@ func (c *ServiceCreateCommand) createVolume(serviceName string, template templat
 		DataRoot:         c.dataRoot,
 		ServiceName:      serviceName,
 		Template:         template,
-		VolumeDescriptor: volumeDescriptor,
+		Trace:            c.trace,
 		UseVolumes:       c.useVolumes,
+		VolumeDescriptor: volumeDescriptor,
 	})
 }
 

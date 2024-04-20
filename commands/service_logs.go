@@ -29,6 +29,9 @@ type ServiceLogsCommand struct {
 
 	// tail specifies the number of lines to show from the end of the logs
 	tail int
+
+	// trace specifies whether to output trace information
+	trace bool
 }
 
 func (c *ServiceLogsCommand) Name() string {
@@ -133,7 +136,8 @@ func (c *ServiceLogsCommand) Run(args []string) int {
 		ServiceType: serviceTemplate.Name,
 	})
 	containerExists, err := container.Exists(c.Context, container.ExistsInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to check for container existence: %s", err.Error()))
@@ -149,6 +153,7 @@ func (c *ServiceLogsCommand) Run(args []string) int {
 		Follow: c.follow,
 		Name:   containerName,
 		Tail:   c.tail,
+		Trace:  c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(err.Error())

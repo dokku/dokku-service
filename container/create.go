@@ -29,11 +29,14 @@ type CreateInput struct {
 	// ServiceRoot specifies the root directory for the service
 	ServiceRoot string
 
-	// Volumes specifies the volumes to use
-	Volumes []volume.Volume
+	// Trace controls whether to print the command being executed
+	Trace bool
 
 	// UseVolumes specifies whether to use volumes
 	UseVolumes bool
+
+	// Volumes specifies the volumes to use
+	Volumes []volume.Volume
 }
 
 // Create creates a container
@@ -74,7 +77,7 @@ func Create(ctx context.Context, input CreateInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("container create for service failed: %w", err)

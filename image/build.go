@@ -31,6 +31,9 @@ type BuildInput struct {
 
 	// Template to use for building the image
 	Template template.ServiceTemplate
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Build builds a Docker image
@@ -72,7 +75,7 @@ func Build(ctx context.Context, input BuildInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("image build for service failed: %w", err)

@@ -19,6 +19,9 @@ type EnterInput struct {
 
 	// Shell to use in the container
 	Shell string
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Enter enters a container
@@ -46,7 +49,7 @@ func Enter(ctx context.Context, input EnterInput) error {
 		Stdin:       os.Stdin,
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("exec into container failed: %w", err)

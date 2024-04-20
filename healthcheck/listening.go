@@ -13,14 +13,32 @@ import (
 )
 
 type ListeningCheckInput struct {
-	Attempts       int
-	Container      types.ContainerJSON
+	// Attempts is the number of attempts to make
+	Attempts int
+
+	// Container is the container to check
+	Container types.ContainerJSON
+
+	// InitialNetwork is the network to use for the wait container
 	InitialNetwork string
-	NetworkAlias   string
-	Timeout        int
-	Ports          []int
-	Wait           int
-	WaitImage      string
+
+	// NetworkAlias is the network alias to use for the wait container
+	NetworkAlias string
+
+	// Ports is the list of ports to check
+	Ports []int
+
+	// Timeout is the timeout in seconds
+	Timeout int
+
+	// Trace controls whether to print the command being executed
+	Trace bool
+
+	// Wait is the time to wait between attempts
+	Wait int
+
+	// WaitImage is the image to use for the wait container
+	WaitImage string
 }
 
 func ListeningCheck(ctx context.Context, input ListeningCheckInput) error {
@@ -84,7 +102,7 @@ func _dockerlisteningCheck(ctx context.Context, input ListeningCheckInput, port 
 		StreamStdio: false,
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	result, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("error running dokku/wait on port: %d: %w", port, err)

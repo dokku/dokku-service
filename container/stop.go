@@ -14,6 +14,9 @@ import (
 type StopInput struct {
 	// Name of the container to stop
 	Name string
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Stop stops a container
@@ -36,7 +39,7 @@ func Stop(ctx context.Context, input StopInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to stop container: %w", err)

@@ -23,6 +23,9 @@ type ServiceStopCommand struct {
 
 	// registryPath specifies an override path to the registry
 	registryPath string
+
+	// trace specifies whether to output trace information
+	trace bool
 }
 
 func (c *ServiceStopCommand) Name() string {
@@ -71,6 +74,7 @@ func (c *ServiceStopCommand) ParsedArguments(args []string) (map[string]command.
 
 func (c *ServiceStopCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
+	f.BoolVar(&c.trace, "trace", false, "output trace information")
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
 	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
 	return f
@@ -125,7 +129,8 @@ func (c *ServiceStopCommand) Run(args []string) int {
 		ServiceType: serviceTemplate.Name,
 	})
 	containerExists, err := container.Exists(c.Context, container.ExistsInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to check for container existence: %s", err.Error()))
@@ -139,7 +144,8 @@ func (c *ServiceStopCommand) Run(args []string) int {
 
 	logger.LogHeader1("Pausing service")
 	err = container.Stop(c.Context, container.StopInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to stop container: %s", err.Error()))
@@ -149,7 +155,8 @@ func (c *ServiceStopCommand) Run(args []string) int {
 
 	logger.Info("Removing container")
 	err = container.Destroy(c.Context, container.DestroyInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to remove container: %s", err.Error()))

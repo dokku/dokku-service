@@ -15,11 +15,23 @@ import (
 )
 
 type CreateInput struct {
-	DataRoot         string
-	ServiceName      string
-	Template         template.ServiceTemplate
+	// DataRoot specifies the root directory for the service data
+	DataRoot string
+
+	// ServiceName specifies the name of the service
+	ServiceName string
+
+	// Template specifies the service template
+	Template template.ServiceTemplate
+
+	// Trace controls whether to print the command being executed
+	Trace bool
+
+	// VolumeDescriptor specifies the volume descriptor
 	VolumeDescriptor template.Volume
-	UseVolumes       bool
+
+	// UseVolumes specifies whether to use volumes
+	UseVolumes bool
 }
 
 func Create(ctx context.Context, input CreateInput) (v Volume, err error) {
@@ -42,7 +54,10 @@ func Create(ctx context.Context, input CreateInput) (v Volume, err error) {
 
 	volumeName := fmt.Sprintf("dokku.%s.%s.%s", input.Template.Name, input.ServiceName, slug.Make(input.VolumeDescriptor.Alias))
 	mountType := "volume"
-	if ok, err := Exists(ctx, ExistsInput{Name: volumeName}); ok && err == nil {
+	if ok, err := Exists(ctx, ExistsInput{
+		Name:  volumeName,
+		Trace: input.Trace,
+	}); ok && err == nil {
 		return Volume{
 			Alias:         input.VolumeDescriptor.Alias,
 			ContainerPath: input.VolumeDescriptor.ContainerPath,
@@ -76,7 +91,7 @@ func Create(ctx context.Context, input CreateInput) (v Volume, err error) {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return Volume{}, err

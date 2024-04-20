@@ -20,6 +20,9 @@ type LogsInput struct {
 
 	// Tail is the number of lines to show from the end of the logs
 	Tail int
+
+	// Trace controls whether to print the command being executed
+	Trace bool
 }
 
 // Logs gets logs from a container
@@ -52,7 +55,7 @@ func Logs(ctx context.Context, input LogsInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = true
+	cmd.PrintCommand = input.Trace
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("container start for service failed: %w", err)

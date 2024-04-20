@@ -25,6 +25,9 @@ type ServiceEnterCommand struct {
 
 	// registryPath specifies an override path to the registry
 	registryPath string
+
+	// trace specifies whether to output trace information
+	trace bool
 }
 
 func (c *ServiceEnterCommand) Name() string {
@@ -129,7 +132,8 @@ func (c *ServiceEnterCommand) Run(args []string) int {
 		ServiceType: templateName,
 	})
 	containerExists, err := container.Exists(c.Context, container.ExistsInput{
-		Name: containerName,
+		Name:  containerName,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to check for container existence: %s", err.Error()))
@@ -171,6 +175,7 @@ func (c *ServiceEnterCommand) Run(args []string) int {
 	err = container.Enter(c.Context, container.EnterInput{
 		Name:  containerName,
 		Shell: shell,
+		Trace: c.trace,
 	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Failed to enter container: %s", err.Error()))
