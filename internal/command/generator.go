@@ -69,6 +69,12 @@ func (c *{{ .Name | camelcase }}Command) Arguments() []command.Argument {
 		Optional:    false,
 		Type:        command.ArgumentString,
 	})
+	args = append(args, command.Argument{
+		Name:        "name",
+		Description: "the name of the created service",
+		Optional:    false,
+		Type:        command.ArgumentString,
+	})
 	return args
 }
 
@@ -110,7 +116,7 @@ func (c *{{ .Name | camelcase }}Command) Run(args []string) int {
 		return 1
 	}
 
-	logger, ok := c.Ui.(*command.ZerologUi)
+	_, ok := c.Ui.(*command.ZerologUi)
 	if !ok {
 		c.Ui.Error("Unable to fetch logger from cli")
 		return 1
@@ -124,9 +130,27 @@ func (c *{{ .Name | camelcase }}Command) Run(args []string) int {
 	defer defferedTemplateFunc()
 
 	templateName := arguments["template"].StringValue()
-	serviceTemplate, ok := templateRegistry.Templates[templateName]
-	if !ok {
-		c.Ui.Error(fmt.Sprintf("Template %s not found", templateName))
+	serviceTemplate, err := fetchTemplate(templateRegistry, templateName)
+	if err != nil {
+		c.Ui.Error(err.Error())
+		return 1
+	}
+
+	serviceName := arguments["name"].StringValue()
+	containerName := container.Name(container.NameInput{
+		ServiceName: serviceName,
+		ServiceType: serviceTemplate.Name,
+	})
+	containerExists, err := container.Exists(c.Context, container.ExistsInput{
+		Name: containerName,
+	})
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Failed to check for container existence: %s", err.Error()))
+		return 1
+	}
+
+	if !containerExists {
+		c.Ui.Error(fmt.Sprintf("%s service %s does not exist", serviceTemplate.Name, serviceName))
 		return 1
 	}
 
