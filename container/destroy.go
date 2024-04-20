@@ -25,9 +25,15 @@ func Destroy(ctx context.Context, input DestroyInput) error {
 			"container", "rm",
 			input.Name,
 		},
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
+		StreamStdio: false,
+		StdOutWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stdout,
+		}),
+		StdErrWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stderr,
+		}),
 	}
 
 	cmd.PrintCommand = true

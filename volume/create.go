@@ -65,9 +65,15 @@ func Create(ctx context.Context, input CreateInput) (v Volume, err error) {
 			fmt.Sprintf("--label=com.dokku.service-alias=%s", input.VolumeDescriptor.Alias),
 			volumeName,
 		},
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
+		StreamStdio: false,
+		StdOutWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stdout,
+		}),
+		StdErrWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stderr,
+		}),
 	}
 
 	cmd.PrintCommand = true

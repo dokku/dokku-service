@@ -71,11 +71,17 @@ func Execute(ctx context.Context, input ExecuteInput) error {
 	cmdArgs = append(cmdArgs, input.Template.Hooks.Image, "/usr/local/bin/hook")
 	var mu sync.Mutex
 	cmd := execute.ExecTask{
-		Command:      "docker",
-		Args:         cmdArgs,
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
+		Command:     "docker",
+		Args:        cmdArgs,
+		StreamStdio: false,
+		StdOutWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stdout,
+		}),
+		StdErrWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stderr,
+		}),
 	}
 
 	cmd.PrintCommand = true

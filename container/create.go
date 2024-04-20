@@ -61,11 +61,17 @@ func Create(ctx context.Context, input CreateInput) error {
 
 	var mu sync.Mutex
 	cmd := execute.ExecTask{
-		Command:      "docker",
-		Args:         cmdArgs,
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
+		Command:     "docker",
+		Args:        cmdArgs,
+		StreamStdio: false,
+		StdOutWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stdout,
+		}),
+		StdErrWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stderr,
+		}),
 	}
 
 	cmd.PrintCommand = true

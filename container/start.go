@@ -20,11 +20,17 @@ type StartInput struct {
 func Start(ctx context.Context, input StartInput) error {
 	var mu sync.Mutex
 	cmd := execute.ExecTask{
-		Command:      "docker",
-		Args:         []string{"container", "start", input.Name},
-		StreamStdio:  false,
-		StdOutWriter: logstreamer.NewLogstreamer(os.Stdout, &mu),
-		StdErrWriter: logstreamer.NewLogstreamer(os.Stderr, &mu),
+		Command:     "docker",
+		Args:        []string{"container", "start", input.Name},
+		StreamStdio: false,
+		StdOutWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stdout,
+		}),
+		StdErrWriter: logstreamer.NewLogstreamer(logstreamer.NewLogstreamerInput{
+			Mutex:  &mu,
+			Writer: os.Stderr,
+		}),
 	}
 
 	cmd.PrintCommand = true

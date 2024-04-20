@@ -13,12 +13,22 @@ type Logstreamer struct {
 	prefix string
 }
 
-func NewLogstreamer(out io.Writer, mu *sync.Mutex) *Logstreamer {
+type NewLogstreamerInput struct {
+	Writer        io.Writer
+	Mutex         *sync.Mutex
+	DisablePrefix bool
+}
+
+func NewLogstreamer(input NewLogstreamerInput) *Logstreamer {
+	prefix := "       "
+	if input.DisablePrefix {
+		prefix = ""
+	}
 	streamer := &Logstreamer{
-		writer: out,
-		mu:     mu,
+		writer: input.Writer,
+		mu:     input.Mutex,
 		buf:    bytes.NewBuffer([]byte("")),
-		prefix: "       ",
+		prefix: prefix,
 	}
 
 	return streamer
