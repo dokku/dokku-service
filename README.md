@@ -45,7 +45,7 @@ Status:
 - [ ] service-links
 - [x] service-list
 - [x] service-logs
-- [ ] service-pause
+- [x] service-pause
 - [ ] service-promote
 - [ ] service-restart
 - [ ] service-set

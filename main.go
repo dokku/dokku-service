@@ -59,6 +59,9 @@ func Commands(ctx context.Context, meta command.Meta) map[string]cli.CommandFact
 		"service-logs": func() (cli.Command, error) {
 			return &commands.ServiceLogsCommand{Meta: meta, Context: ctx}, nil
 		},
+		"service-pause": func() (cli.Command, error) {
+			return &commands.ServicePauseCommand{Meta: meta, Context: ctx}, nil
+		},
 		"service-stop": func() (cli.Command, error) {
 			return &commands.ServiceStopCommand{Meta: meta, Context: ctx}, nil
 		},
