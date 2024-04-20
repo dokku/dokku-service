@@ -43,8 +43,8 @@ Status:
 - [ ] service-link
 - [ ] service-linked
 - [ ] service-links
-- [ ] service-list
-- [ ] service-logs
+- [x] service-list
+- [x] service-logs
 - [ ] service-pause
 - [ ] service-promote
 - [ ] service-restart

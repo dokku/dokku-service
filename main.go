@@ -53,6 +53,9 @@ func Commands(ctx context.Context, meta command.Meta) map[string]cli.CommandFact
 		"service-list": func() (cli.Command, error) {
 			return &commands.ServiceListCommand{Meta: meta, Context: ctx}, nil
 		},
+		"service-logs": func() (cli.Command, error) {
+			return &commands.ServiceLogsCommand{Meta: meta, Context: ctx}, nil
+		},
 		"template-info": func() (cli.Command, error) {
 			return &commands.TemplateInfoCommand{Meta: meta}, nil
 		},
