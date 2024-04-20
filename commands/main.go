@@ -3,13 +3,14 @@ package commands
 import (
 	"context"
 	"dokku-service/registry"
+	"dokku-service/template"
 	"fmt"
 	"os"
 )
 
 type TemplateCleanupFunc func() error
 
-func templateRegistry(ctx context.Context, registryPath string) (registry.Registry, TemplateCleanupFunc, error) {
+func fetchTemplateRegistry(ctx context.Context, registryPath string) (registry.Registry, TemplateCleanupFunc, error) {
 	vendoredRegistry := false
 	deferredFunction := func() error {
 		return nil
@@ -39,4 +40,13 @@ func templateRegistry(ctx context.Context, registryPath string) (registry.Regist
 	}
 
 	return templateRegistry, deferredFunction, err
+}
+
+func fetchTemplate(templateRegistry registry.Registry, templateName string) (template.ServiceTemplate, error) {
+	serviceTemplate, ok := templateRegistry.Templates[templateName]
+	if !ok {
+		return template.ServiceTemplate{}, fmt.Errorf("Template %s not found", templateName)
+	}
+
+	return serviceTemplate, nil
 }

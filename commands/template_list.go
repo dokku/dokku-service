@@ -82,7 +82,7 @@ func (c *TemplateListCommand) Run(args []string) int {
 		return 1
 	}
 
-	templateRegistry, defferedTemplateFunc, err := templateRegistry(c.Context, c.registryPath)
+	templateRegistry, defferedTemplateFunc, err := fetchTemplateRegistry(c.Context, c.registryPath)
 	if err != nil {
 		c.Ui.Error(err.Error())
 		return 1

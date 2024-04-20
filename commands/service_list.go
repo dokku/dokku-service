@@ -97,7 +97,7 @@ func (c *ServiceListCommand) Run(args []string) int {
 		return 1
 	}
 
-	templateRegistry, defferedTemplateFunc, err := templateRegistry(c.Context, c.registryPath)
+	templateRegistry, defferedTemplateFunc, err := fetchTemplateRegistry(c.Context, c.registryPath)
 	if err != nil {
 		c.Ui.Error(err.Error())
 		return 1
@@ -105,9 +105,9 @@ func (c *ServiceListCommand) Run(args []string) int {
 	defer defferedTemplateFunc()
 
 	templateName := arguments["template"].StringValue()
-	serviceTemplate, ok := templateRegistry.Templates[templateName]
-	if !ok {
-		c.Ui.Error(fmt.Sprintf("Template %s not found", templateName))
+	serviceTemplate, err := fetchTemplate(templateRegistry, templateName)
+	if err != nil {
+		c.Ui.Error(err.Error())
 		return 1
 	}
 
