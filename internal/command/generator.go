@@ -27,6 +27,8 @@ import (
 	"github.com/josegonzalez/cli-skeleton/command"
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
+
+	"dokku-service/container"
 )
 
 type {{ .Name | camelcase }}Command struct {
@@ -122,7 +124,7 @@ func (c *{{ .Name | camelcase }}Command) Run(args []string) int {
 		return 1
 	}
 
-	templateRegistry, defferedTemplateFunc,err := templateRegistry(c.Context, c.registryPath)
+	templateRegistry, defferedTemplateFunc,err := fetchTemplateRegistry(c.Context, c.registryPath)
 	if err != nil {
 		c.Ui.Error(err.Error())
 		return 1
