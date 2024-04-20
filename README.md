@@ -50,7 +50,7 @@ Status:
 - [ ] service-restart
 - [ ] service-set
 - [ ] service-start
-- [ ] service-stop
+- [x] service-stop
 - [ ] service-unexpose
 - [ ] service-unlink
 - [ ] service-upgrade
