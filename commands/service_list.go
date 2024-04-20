@@ -114,8 +114,8 @@ func (c *ServiceListCommand) Run(args []string) int {
 	logger.LogHeader1(fmt.Sprintf("%s services", serviceTemplate.Name))
 	servicesRoot := fmt.Sprintf("%s/%s", c.dataRoot, templateName)
 	if _, err := os.Stat(servicesRoot); err != nil {
-		c.Ui.Error(fmt.Sprintf("Failed to check for services: %s", err.Error()))
-		return 1
+		// note: no services exist
+		return 0
 	}
 
 	files, err := os.ReadDir(servicesRoot)
