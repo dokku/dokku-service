@@ -17,7 +17,7 @@ require (
 	github.com/moby/moby v26.0.0+incompatible
 	github.com/posener/complete v1.2.3
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/sync v0.6.0
+	golang.org/x/sync v0.7.0
 	golang.org/x/term v0.17.0
 	mvdan.cc/sh/v3 v3.8.0
 )
