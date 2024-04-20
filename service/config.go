@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+// ConfigInput contains the input parameters for the Config function
 type ConfigInput struct {
 	// DataRoot is the root data directory
 	DataRoot string
@@ -23,25 +24,49 @@ type ConfigInput struct {
 	ServiceType string
 }
 
+// ConfigOutput contains the output parameters for the Config function
 type ConfigOutput struct {
-	Config   RunConfig                `json:"config"`
+	// Config is the run configuration for the service
+	Config RunConfig `json:"config"`
+
+	// Template is the service template
 	Template template.ServiceTemplate `json:"template"`
 }
 
+// RunConfig represents the configuration for running a service
 type RunConfig struct {
-	Arguments            map[string]string `json:"arguments"`
-	ContainerCreateFlags []string          `json:"container_create_flags"`
-	DataRoot             string            `json:"data_root"`
+	// Arguments are the arguments to pass to the service
+	Arguments map[string]string `json:"arguments"`
+
+	// ContainerCreateFlags are the flags to pass to the container create command
+	ContainerCreateFlags []string `json:"container_create_flags"`
+
+	// DataRoot is the root data directory
+	DataRoot string `json:"data_root"`
+
+	// EnvironmentVariables are the environment variables to pass to the service
 	EnvironmentVariables map[string]string `json:"env"`
-	Image                RunImageConfig    `json:"image"`
-	ImageBuildFlags      []string          `json:"image_build_flags"`
-	ServiceRoot          string            `json:"service_root"`
-	UseVolumes           bool              `json:"use_volumes"`
+
+	// Image is the image to use for the service
+	Image RunImageConfig `json:"image"`
+
+	// ImageBuildFlags are the flags to pass to the image build command
+	ImageBuildFlags []string `json:"image_build_flags"`
+
+	// ServiceRoot is the root directory for the service
+	ServiceRoot string `json:"service_root"`
+
+	// UseVolumes specifies whether to use volumes
+	UseVolumes bool `json:"use_volumes"`
 }
 
+// RunImageConfig represents the configuration for the image to run
 type RunImageConfig struct {
+	// Name is the name of the image
 	Name string `json:"name"`
-	Tag  string `json:"tag"`
+
+	// Tag is the tag of the image
+	Tag string `json:"tag"`
 }
 
 func Config(ctx context.Context, input ConfigInput) (ConfigOutput, error) {

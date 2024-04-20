@@ -31,6 +31,14 @@ const (
 	LABEL_CONFIG_HOOKS_POST_START  Label = "com.dokku.template.config.hooks.post-start"
 	LABEL_CONFIG_PORTS_EXPOSE      Label = "com.dokku.template.config.ports.expose"
 	LABEL_CONFIG_PORTS_WAIT        Label = "com.dokku.template.config.ports.wait"
+	LABEL_CONFIG_VARIABLES_EXPORT  Label = "com.dokku.template.config.variables.exported"
+	LABEL_CONFIG_VARIABLES_MAPPED  Label = "com.dokku.template.config.variables.mapped"
+)
+
+const (
+	LABEL_MAPPED_NAME          = "com.dokku.template.config.variables.mapped.name"
+	LABEL_MAPPED_PASSWORD      = "com.dokku.template.config.variables.mapped.password"
+	LABEL_MAPPED_ROOT_PASSWORD = "com.dokku.template.config.variables.mapped.root-password"
 )
 
 type ServiceTemplate struct {
@@ -41,6 +49,7 @@ type ServiceTemplate struct {
 	Arguments         []Argument        `json:"arguments"`
 	Hooks             ServiceHooks      `json:"hooks"`
 	ExportedVariables map[string]string `json:"exported_variables"`
+	MappedVariables   map[string]string `json:"mapped_variables"`
 	Commands          map[string]string `json:"commands"`
 	TemplatePath      string            `json:"path"`
 	VendoredTemplate  bool              `json:"vendored_template"`
@@ -127,6 +136,8 @@ func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (Servic
 
 	arguments := []Argument{}
 	volumes := []Volume{}
+	exportedVariables := map[string]string{}
+	mappedVariables := map[string]string{}
 	for _, command := range commands {
 		if err := validateLabel(command); err != nil {
 			return ServiceTemplate{}, fmt.Errorf("invalid LABEL directive: %w", err)
@@ -147,6 +158,25 @@ func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (Servic
 			}
 			volumes = append(volumes, volume)
 		}
+
+		if isExportedVariable(command.Value[0]) {
+			exportedVariable := strings.TrimPrefix(command.Value[0], string(LABEL_CONFIG_VARIABLES_EXPORT)+".")
+			value, err := getLabelValue(commands, command.Value[0])
+			if err != nil {
+				return ServiceTemplate{}, fmt.Errorf("missing label value %s: %w", command.Value[0], err)
+			}
+
+			exportedVariables[exportedVariable] = value
+		}
+
+		if isMappedVariable(command.Value[0]) {
+			value, err := getLabelValue(commands, command.Value[0])
+			if err != nil {
+				return ServiceTemplate{}, fmt.Errorf("missing label value %s: %w", command.Value[0], err)
+			}
+
+			mappedVariables[command.Value[0]] = value
+		}
 	}
 
 	image := ServiceImage{}
@@ -160,12 +190,12 @@ func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (Servic
 		}
 	}
 
-	name, err := getLabelValue(commands, LABEL_NAME)
+	name, err := getLabelValue(commands, string(LABEL_NAME))
 	if err != nil {
 		return ServiceTemplate{}, fmt.Errorf("missing required label %s: %w", string(LABEL_NAME), err)
 	}
 
-	description, err := getLabelValue(commands, LABEL_DESCRIPTION)
+	description, err := getLabelValue(commands, string(LABEL_DESCRIPTION))
 	if err != nil {
 		return ServiceTemplate{}, fmt.Errorf("missing required label %s: %w", string(LABEL_DESCRIPTION), err)
 	}
@@ -222,7 +252,7 @@ func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (Servic
 		LABEL_CONFIG_COMMANDS_IMPORT:  "import",
 	}
 	for label, commandName := range commandLabels {
-		command, _ := getLabelValue(commands, label)
+		command, _ := getLabelValue(commands, string(label))
 		if command != "" {
 			serviceCommands[commandName] = command
 		}
@@ -246,7 +276,9 @@ func ParseDockerfile(ctx context.Context, input NewServiceTemplateInput) (Servic
 			PostCreate: postCreateHook,
 			PostStart:  postStartHook,
 		},
-		Volumes: volumes,
+		ExportedVariables: exportedVariables,
+		MappedVariables:   mappedVariables,
+		Volumes:           volumes,
 	}
 
 	return template, nil
@@ -356,8 +388,8 @@ func validateLabel(command dockerfile.Command) error {
 	}
 
 	// special-case exported and mapped variables
-	isExported := strings.HasPrefix(key, "com.dokku.template.config.variables.exported.")
-	isMapped := strings.HasPrefix(key, "com.dokku.template.config.variables.mapped.")
+	isExported := strings.HasPrefix(key, string(LABEL_CONFIG_VARIABLES_EXPORT)+".")
+	isMapped := strings.HasPrefix(key, string(LABEL_CONFIG_VARIABLES_MAPPED)+".")
 	if ok := validLabels[Label(key)]; ok {
 		return nil
 	}
@@ -368,21 +400,29 @@ func validateLabel(command dockerfile.Command) error {
 	return nil
 }
 
+func isExportedVariable(label string) bool {
+	return strings.HasPrefix(label, string(LABEL_CONFIG_VARIABLES_EXPORT)+".")
+}
+
+func isMappedVariable(label string) bool {
+	return strings.HasPrefix(label, string(LABEL_CONFIG_VARIABLES_MAPPED)+".")
+}
+
 func getLabelValueWithDefault(commands []dockerfile.Command, label Label, defaultValue string) string {
-	value, _ := getLabelValue(commands, label)
+	value, _ := getLabelValue(commands, string(label))
 	if value == "" {
 		value = defaultValue
 	}
 
 	return value
 }
-func getLabelValue(commands []dockerfile.Command, label Label) (string, error) {
+func getLabelValue(commands []dockerfile.Command, label string) (string, error) {
 	for _, command := range commands {
 		if !isLabel(command) {
 			continue
 		}
 
-		if command.Value[0] == string(label) {
+		if command.Value[0] == label {
 			s, err := strconv.Unquote(command.Value[1])
 			if errors.Is(err, strconv.ErrSyntax) {
 				return command.Value[1], nil
@@ -392,5 +432,5 @@ func getLabelValue(commands []dockerfile.Command, label Label) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("label not found: %s", string(label))
+	return "", fmt.Errorf("label not found: %s", label)
 }

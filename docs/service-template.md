@@ -77,12 +77,13 @@ When a service is "linked" to another container, a list of environment variables
 With the following label:
 
 ```Dockerfile
-LABEL com.dokku.template.config.variables.exported.DATABASE_URL="postgres://postgres:{{ .POSTGRES_PASSWORD_SECRET }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DATABASE }}"
+LABEL com.dokku.template.config.variables.exported.DATABASE_URL="postgres://postgres:{{ .POSTGRES_PASSWORD_SECRET }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DB }}"
 ```
 
-The variable `DATABASE_URL` would be exposed with the templated value `postgres://postgres:{{ .POSTGRES_PASSWORD_SECRET }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DATABASE }}`.
+The variable `DATABASE_URL` would be exposed with the templated value `postgres://postgres:{{ .POSTGRES_PASSWORD_SECRET }}@{{ .HOSTNAME }}:5432/{{ .POSTGRES_DB }}`.
 
 ### Mapped Variable Labels
 
-- `com.dokku.template.config.variables.mapped.password`
-- `com.dokku.template.config.variables.mapped.root-password`
+- `com.dokku.template.config.variables.mapped.name`: remaps the service name to this variable
+- `com.dokku.template.config.variables.mapped.password`: remaps the password to this variable
+- `com.dokku.template.config.variables.mapped.root-password`: remaps the root password to this variable

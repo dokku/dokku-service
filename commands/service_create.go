@@ -233,7 +233,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 		return 3
 	}
 
-	containerArgs, err := c.collectContainerArgs(serviceTemplate)
+	containerArgs, err := c.collectContainerArgs(serviceTemplate, serviceName)
 	if err != nil {
 		c.Ui.Error("Failed to collect arguments for service: " + err.Error())
 		return 1
@@ -481,10 +481,10 @@ func (c *ServiceCreateCommand) createVolume(serviceName string, template templat
 	})
 }
 
-func (c *ServiceCreateCommand) collectContainerArgs(template template.ServiceTemplate) (map[string]argument.Argument, error) {
+func (c *ServiceCreateCommand) collectContainerArgs(serviceTemplate template.ServiceTemplate, serviceName string) (map[string]argument.Argument, error) {
 	arguments := map[string]argument.Argument{}
 
-	for _, templateArg := range template.Arguments {
+	for _, templateArg := range serviceTemplate.Arguments {
 		arguments[templateArg.Name] = argument.Argument{
 			Key:      templateArg.Name,
 			Value:    templateArg.Value,
@@ -504,7 +504,13 @@ func (c *ServiceCreateCommand) collectContainerArgs(template template.ServiceTem
 		}
 	}
 
-	for _, argument := range arguments {
+	for key, argument := range arguments {
+		// special case any "name" argument
+		if argument.Key == serviceTemplate.MappedVariables[template.LABEL_MAPPED_NAME] {
+			argument.Value = serviceName
+			arguments[key] = argument
+		}
+
 		if argument.Value == "" && !argument.Override {
 			return arguments, fmt.Errorf("missing value for required service argument %s", argument.Key)
 		}
