@@ -68,3 +68,13 @@ func (r *Registry) Parse(ctx context.Context) error {
 
 	return nil
 }
+
+func (r *Registry) Contains(ctx context.Context, templateName string) bool {
+	_, ok := r.Templates[templateName]
+	return ok
+}
+
+func (r *Registry) ServiceTemplate(ctx context.Context, templateName string) (template.ServiceTemplate, bool) {
+	t, ok := r.Templates[templateName]
+	return t, ok
+}

@@ -35,7 +35,7 @@ Status:
 - [ ] service-connect
 - [x] service-destroy
 - [ ] service-enter
-- [ ] service-exists
+- [x] service-exists
 - [ ] service-export
 - [ ] service-expose
 - [ ] service-import

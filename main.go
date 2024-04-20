@@ -50,6 +50,9 @@ func Commands(ctx context.Context, meta command.Meta) map[string]cli.CommandFact
 		"service-enter": func() (cli.Command, error) {
 			return &commands.ServiceEnterCommand{Meta: meta, Context: ctx}, nil
 		},
+		"service-exists": func() (cli.Command, error) {
+			return &commands.ServiceExistsCommand{Meta: meta, Context: ctx}, nil
+		},
 		"service-list": func() (cli.Command, error) {
 			return &commands.ServiceListCommand{Meta: meta, Context: ctx}, nil
 		},
