@@ -38,7 +38,7 @@ func (c *ServiceListCommand) Help() string {
 func (c *ServiceListCommand) Examples() map[string]string {
 	appName := os.Getenv("CLI_APP_NAME")
 	return map[string]string{
-		"run command": fmt.Sprintf("%s %s", appName, c.Name()),
+		"list all services for a given template": fmt.Sprintf("%s %s postgres", appName, c.Name()),
 	}
 }
 
