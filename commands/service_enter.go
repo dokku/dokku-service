@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -11,7 +10,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"dokku-service/container"
-	"dokku-service/template"
+	"dokku-service/service"
 )
 
 type ServiceEnterCommand struct {
@@ -145,26 +144,14 @@ func (c *ServiceEnterCommand) Run(args []string) int {
 		return 1
 	}
 
-	serviceRoot := fmt.Sprintf("%s/%s/%s", c.dataRoot, templateName, serviceName)
-	if _, err := os.Stat(serviceRoot); err != nil {
-		c.Ui.Error(fmt.Sprintf("Failed to check for service data existence: %s", err.Error()))
-		return 1
-	}
-
-	configPath := fmt.Sprintf("%s/config.json", serviceRoot)
-	if _, err := os.Stat(configPath); err != nil {
-		c.Ui.Error(fmt.Sprintf("Failed to check for service config existence: %s", err.Error()))
-	}
-
-	b, err := os.ReadFile(configPath)
+	_, err = service.Config(c.Context, service.ConfigInput{
+		DataRoot:    c.dataRoot,
+		Name:        serviceName,
+		Registry:    templateRegistry,
+		ServiceType: templateName,
+	})
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Failed to read service config: %s", err.Error()))
-		return 1
-	}
-
-	parsedServiceTemplate := template.ServiceTemplate{}
-	if err := json.Unmarshal(b, &parsedServiceTemplate); err != nil {
-		c.Ui.Error(fmt.Sprintf("Failed to unmarshal service config: %s", err.Error()))
+		c.Ui.Error(fmt.Sprintf("Failed to fetch service config: %s", err.Error()))
 		return 1
 	}
 
