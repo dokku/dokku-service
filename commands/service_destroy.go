@@ -79,6 +79,7 @@ func (c *ServiceDestroyCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
 	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
+	f.BoolVar(&c.trace, "trace", false, "output trace information")
 	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }

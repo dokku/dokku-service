@@ -82,6 +82,7 @@ func (c *ServiceLogsCommand) FlagSet() *flag.FlagSet {
 	f := c.Meta.FlagSet(c.Name(), command.FlagSetClient)
 	f.BoolVar(&c.follow, "follow", false, "do not stop when end of the logs are reached and wait for additional output")
 	f.IntVar(&c.tail, "tail", -1, "number of lines to show from the end of the logs")
+	f.BoolVar(&c.trace, "trace", false, "output trace information")
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
 	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
 	return f

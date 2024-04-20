@@ -145,6 +145,7 @@ func (c *ServiceCreateCommand) FlagSet() *flag.FlagSet {
 	f.StringSliceVar(&c.postCreateNetwork, "post-create-network", []string{}, "network to attach to the container after creation")
 	f.StringSliceVar(&c.postStartNetwork, "post-start-network", []string{}, "network to attach to the container after start")
 	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
+	f.BoolVar(&c.trace, "trace", false, "output trace information")
 	f.BoolVar(&c.useVolumes, "use-volumes", false, "use volumes instead of a directory on disk for data")
 	return f
 }
