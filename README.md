@@ -32,7 +32,7 @@ Status:
 - [ ] service-backup
 - [x] service-create
 - [ ] service-clone
-- [ ] service-connect
+- [x] service-connect
 - [x] service-destroy
 - [x] service-enter
 - [x] service-exists
