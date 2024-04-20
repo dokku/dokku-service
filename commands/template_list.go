@@ -7,8 +7,6 @@ import (
 	"github.com/josegonzalez/cli-skeleton/command"
 	"github.com/posener/complete"
 	flag "github.com/spf13/pflag"
-
-	"dokku-service/registry"
 )
 
 type TemplateListCommand struct {
@@ -84,31 +82,12 @@ func (c *TemplateListCommand) Run(args []string) int {
 		return 1
 	}
 
-	registryPath := c.registryPath
-	vendoredRegistry := false
-	if c.registryPath == "" {
-		dir, err := os.MkdirTemp("", "dokku-service-registry-*")
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Failed to create temporary directory: %s", err.Error()))
-			return 1
-		}
-		defer os.RemoveAll(dir)
-
-		if _, err := registry.NewVendoredRegistry(c.Context, dir); err != nil {
-			c.Ui.Error(fmt.Sprintf("Failed to create vendored registry: %s", err.Error()))
-			return 1
-		}
-		registryPath = dir
-		vendoredRegistry = true
-	}
-	templateRegistry, err := registry.NewRegistry(c.Context, registry.NewRegistryInput{
-		RegistryPath: registryPath,
-		Vendored:     vendoredRegistry,
-	})
+	templateRegistry, defferedTemplateFunc, err := templateRegistry(c.Context, c.registryPath)
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Failed to parse registry: %s", err.Error()))
+		c.Ui.Error(err.Error())
 		return 1
 	}
+	defer defferedTemplateFunc()
 
 	logger.LogHeader1("Templates")
 	for _, serviceTemplate := range templateRegistry.Templates {

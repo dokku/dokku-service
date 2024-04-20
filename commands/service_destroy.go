@@ -10,7 +10,6 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"dokku-service/container"
-	"dokku-service/registry"
 )
 
 type ServiceDestroyCommand struct {
@@ -110,31 +109,12 @@ func (c *ServiceDestroyCommand) Run(args []string) int {
 		return 1
 	}
 
-	registryPath := c.registryPath
-	vendoredRegistry := false
-	if c.registryPath == "" {
-		dir, err := os.MkdirTemp("", "dokku-service-registry-*")
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Failed to create temporary directory: %s", err.Error()))
-			return 1
-		}
-		defer os.RemoveAll(dir)
-
-		if _, err := registry.NewVendoredRegistry(c.Context, dir); err != nil {
-			c.Ui.Error(fmt.Sprintf("Failed to create vendored registry: %s", err.Error()))
-			return 1
-		}
-		registryPath = dir
-		vendoredRegistry = true
-	}
-	templateRegistry, err := registry.NewRegistry(c.Context, registry.NewRegistryInput{
-		RegistryPath: registryPath,
-		Vendored:     vendoredRegistry,
-	})
+	templateRegistry, defferedTemplateFunc, err := templateRegistry(c.Context, c.registryPath)
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Failed to parse registry: %s", err.Error()))
+		c.Ui.Error(err.Error())
 		return 1
 	}
+	defer defferedTemplateFunc()
 
 	templateName := arguments["template"].StringValue()
 	serviceTemplate, ok := templateRegistry.Templates[templateName]
