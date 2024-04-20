@@ -34,7 +34,7 @@ Status:
 - [ ] service-clone
 - [ ] service-connect
 - [x] service-destroy
-- [ ] service-enter
+- [x] service-enter
 - [x] service-exists
 - [ ] service-export
 - [ ] service-expose
