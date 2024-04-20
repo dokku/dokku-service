@@ -19,32 +19,12 @@ import (
 	"dokku-service/hook"
 	"dokku-service/image"
 	"dokku-service/network"
+	"dokku-service/service"
 	"dokku-service/template"
 	"dokku-service/volume"
 )
 
 const DATA_ROOT = "/tmp"
-
-type CreateConfig struct {
-	Config   RunConfig                `json:"config"`
-	Template template.ServiceTemplate `json:"template"`
-}
-
-type RunConfig struct {
-	Arguments            map[string]string `json:"arguments"`
-	ContainerCreateFlags []string          `json:"container_create_flags"`
-	DataRoot             string            `json:"data_root"`
-	EnvironmentVariables map[string]string `json:"env"`
-	Image                RunImageConfig    `json:"image"`
-	ImageBuildFlags      []string          `json:"image_build_flags"`
-	ServiceRoot          string            `json:"service_root"`
-	UseVolumes           bool              `json:"use_volumes"`
-}
-
-type RunImageConfig struct {
-	Name string `json:"name"`
-	Tag  string `json:"tag"`
-}
 
 type ServiceCreateCommand struct {
 	command.Meta
@@ -317,13 +297,13 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	}
 
 	configFile := fmt.Sprintf("%s/config.json", serviceRoot)
-	createConfig := CreateConfig{
-		Config: RunConfig{
+	createConfig := service.ConfigOutput{
+		Config: service.RunConfig{
 			Arguments:            c.arguments,
 			ContainerCreateFlags: c.containerCreateFlags,
 			DataRoot:             c.dataRoot,
 			EnvironmentVariables: envConfig,
-			Image: RunImageConfig{
+			Image: service.RunImageConfig{
 				Name: c.imageName,
 				Tag:  c.imageTag,
 			},
