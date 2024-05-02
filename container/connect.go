@@ -1,7 +1,8 @@
-package service
+package container
 
 import (
 	"context"
+	"dokku-service/service"
 	"fmt"
 	"html/template"
 	"os"
@@ -19,7 +20,7 @@ type ConnectInput struct {
 	ContainerName string
 
 	// Config specifies the service template config to use
-	ConfigOutput ConfigOutput
+	ConfigOutput service.ConfigOutput
 
 	// Name is the name of the service
 	Name string

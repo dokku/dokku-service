@@ -154,7 +154,7 @@ func (c *ServiceConnectCommand) Run(args []string) int {
 		return 1
 	}
 
-	err = service.Connect(c.Context, service.ConnectInput{
+	err = container.Connect(c.Context, container.ConnectInput{
 		ContainerName: containerName,
 		ConfigOutput:  config,
 		Name:          serviceName,
