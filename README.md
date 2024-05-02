@@ -36,9 +36,9 @@ Status:
 - [x] service-destroy
 - [x] service-enter
 - [x] service-exists
-- [ ] service-export
+- [x] service-export
 - [ ] service-expose
-- [ ] service-import
+- [x] service-import
 - [ ] service-info
 - [ ] service-link
 - [ ] service-linked

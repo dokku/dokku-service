@@ -11,11 +11,11 @@ import (
 
 // EnterInput contains the input parameters for the Enter function
 type EnterInput struct {
-	// Name of the container to check for existence
+	// Name of the container to enter
 	Name string
 
 	// Command to run in the container
-	Command string
+	Command []string
 
 	// Shell to use in the container
 	Shell string
@@ -26,12 +26,12 @@ type EnterInput struct {
 
 // Enter enters a container
 func Enter(ctx context.Context, input EnterInput) error {
-	command := input.Shell
-	if input.Command != "" {
+	command := []string{input.Shell}
+	if len(input.Command) > 0 {
 		command = input.Command
 	}
-	if command == "" {
-		command = "/bin/bash"
+	if len(command) == 0 {
+		command = []string{"/bin/bash"}
 	}
 
 	args := []string{"container", "exec"}
@@ -41,7 +41,7 @@ func Enter(ctx context.Context, input EnterInput) error {
 
 	args = append(args, input.Name)
 
-	args = append(args, command)
+	args = append(args, command...)
 	cmd := execute.ExecTask{
 		Command:     "docker",
 		Args:        args,
