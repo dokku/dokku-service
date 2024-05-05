@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -20,6 +21,12 @@ type EnterInput struct {
 
 	// Shell to use in the container
 	Shell string
+
+	// StdErrWriter is the writer to write the stderr of the command to
+	StdErrWriter io.Writer
+
+	// StdOutWriter is the writer to write the stdout of the command to
+	StdOutWriter io.Writer
 
 	// Trace controls whether to print the command being executed
 	Trace bool
@@ -42,12 +49,23 @@ func Enter(ctx context.Context, input EnterInput) error {
 
 	args = append(args, input.Name)
 
+	stdoutWriter := io.Writer(os.Stdout)
+	if input.StdOutWriter != nil {
+		stdoutWriter = input.StdOutWriter
+	}
+	stderrWriter := io.Writer(os.Stderr)
+	if input.StdErrWriter != nil {
+		stderrWriter = input.StdErrWriter
+	}
+
+
 	args = append(args, command...)
 	cmd := execute.ExecTask{
-		Command:     "docker",
-		Args:        args,
-		StreamStdio: true,
-		Stdin:       os.Stdin,
+		Command:      "docker",
+		Args:         args,
+		StdOutWriter: stdoutWriter,
+		StdErrWriter: stderrWriter,
+		Stdin:        os.Stdin,
 	}
 
 	if input.Trace {

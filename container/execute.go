@@ -5,6 +5,7 @@ import (
 	"dokku-service/service"
 	"fmt"
 	"html/template"
+	"io"
 	"strings"
 
 	"github.com/Masterminds/sprig/v3"
@@ -21,6 +22,12 @@ type ExecuteInput struct {
 
 	// Config specifies the service template config to use
 	ConfigOutput service.ConfigOutput
+
+	// StdErrWriter is the writer to write the stderr of the command to
+	StdErrWriter io.Writer
+
+	// StdOutWriter is the writer to write the stdout of the command to
+	StdOutWriter io.Writer
 
 	// Trace controls whether to print the command being executed
 	Trace bool
@@ -54,8 +61,10 @@ func Execute(ctx context.Context, input ExecuteInput) error {
 	}
 
 	return Enter(ctx, EnterInput{
-		Name:    input.Name,
-		Command: fields,
-		Trace:   input.Trace,
+		Name:         input.Name,
+		Command:      fields,
+		StdErrWriter: input.StdErrWriter,
+		StdOutWriter: input.StdOutWriter,
+		Trace:        input.Trace,
 	})
 }
