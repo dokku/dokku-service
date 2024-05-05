@@ -2,6 +2,7 @@ ARG IMAGE=redis:7-alpine
 FROM ${IMAGE}
 
 VOLUME /data
+VOLUME /usr/local/etc/redis
 
 LABEL com.dokku.template.name=redis
 LABEL com.dokku.template.description="A template for managing redis"
@@ -21,3 +22,5 @@ ARG REDIS_DATABASE=0
 ARG REDIS_PASSWORD_SECRET="{{ randAlphaNum 32 }}"
 ARG LANG=C.UTF-8 
 ARG LC_ALL=C.UTF-8
+
+CMD ["redis-server", "//usr/local/etc/redis/redis.conf", "--bind", "0.0.0.0"]
