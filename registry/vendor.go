@@ -105,6 +105,7 @@ func writeOutFile(_ context.Context, dirEntry fs.DirEntry, basePath string, writ
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
+	defer handle.Close()
 
 	_, err = handle.Write(contents)
 	if err != nil {
