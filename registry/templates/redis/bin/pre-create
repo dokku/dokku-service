@@ -1,12 +1,10 @@
-#!/usr/local/bin/bash
-set -eo pipefail
-set -x
+#!/usr/bin/env sh
+set -e
+[ -n "$TRACE" ] && set -x
 
 echo "Executing pre-create"
 
-if [[ ! -f "$VOLUME_DATA/redis.conf" ]]; then
-	touch "$VOLUME_DATA/redis.conf"
-	echo "requirepass $REDIS_PASSWORD" >"$VOLUME_DATA/redis.conf"
-else
-	cat "$VOLUME_DATA/redis.conf"
+if [ ! -f "$VOLUME_USR_LOCAL_ETC_REDIS/redis.conf" ]; then
+	touch "$VOLUME_USR_LOCAL_ETC_REDIS/redis.conf"
+	echo "requirepass $REDIS_PASSWORD" >"$VOLUME_USR_LOCAL_ETC_REDIS/redis.conf"
 fi
