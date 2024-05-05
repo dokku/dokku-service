@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 //go:embed all:templates
@@ -96,7 +97,8 @@ func writeOutFile(_ context.Context, dirEntry fs.DirEntry, basePath string, writ
 		return fmt.Errorf("cannot write directory: %s", dirEntry.Name())
 	}
 
-	contents, err := templates.ReadFile(filepath.Join("templates", basePath, dirEntry.Name()))
+	templateFilepath := filepath.Join("templates", basePath, dirEntry.Name())
+	contents, err := templates.ReadFile(templateFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
@@ -112,7 +114,16 @@ func writeOutFile(_ context.Context, dirEntry fs.DirEntry, basePath string, writ
 		return fmt.Errorf("failed to write content to file: %w", err)
 	}
 
-	// todo: set permissions
+	if err := handle.Close(); err != nil {
+		return fmt.Errorf("failed to close file handle: %w", err)
+	}
+
+	if strings.Contains(templateFilepath, "/bin/") {
+		err := os.Chmod(writePath, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to set file permissions: %w", err)
+		}
+	}
 
 	return nil
 }
