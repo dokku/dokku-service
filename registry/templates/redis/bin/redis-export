@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+set -e
+[ -n "$TRACE" ] && set -x
+
+main() {
+  REDIS_PASSWORD=""
+
+  while [ $# -gt 0 ]; do
+    case $1 in
+    -a | --pass)
+      REDIS_PASSWORD="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      shift # past argument
+      ;;
+    esac
+  done
+
+  if [ -z "$REDIS_PASSWORD" ]; then
+    echo "REDIS_PASSWORD is required" >&2
+    return 1
+  fi
+
+  LASTSAVE1="$(echo LASTSAVE | redis-cli --no-auth-warning --pass "$REDIS_PASSWORD")"
+  echo BGSAVE | redis-cli --no-auth-warning --pass "$REDIS_PASSWORD" >/dev/null 2>&1
+  LASTSAVE2="$(echo LASTSAVE | redis-cli --no-auth-warning --pass "$REDIS_PASSWORD")"
+
+  until [ "$LASTSAVE1" != "$LASTSAVE2" ]; do
+    LASTSAVE2=$(echo LASTSAVE | redis-cli --no-auth-warning --pass "$REDIS_PASSWORD")
+    sleep 5
+  done
+
+  cat /data/dump.rdb
+}
+
+main "$@"
