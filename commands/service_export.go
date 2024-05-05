@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/josegonzalez/cli-skeleton/command"
@@ -21,6 +22,9 @@ type ServiceExportCommand struct {
 
 	// dataRoot specifies the root directory for service data
 	dataRoot string
+
+	// fileHandle specifies the file handle for the exported data
+	fileHandle string
 
 	// registryPath specifies an override path to the registry
 	registryPath string
@@ -78,6 +82,7 @@ func (c *ServiceExportCommand) FlagSet() *flag.FlagSet {
 	f.BoolVar(&c.trace, "trace", false, "output trace information")
 	f.StringVar(&c.dataRoot, "data-root", DATA_ROOT, "the root directory for service data")
 	f.StringVar(&c.registryPath, "registry-path", "", "an override path to the registry")
+	f.StringVarP(&c.fileHandle, "file", "f", "", "the file handle for the exported data")
 	return f
 }
 
@@ -154,10 +159,25 @@ func (c *ServiceExportCommand) Run(args []string) int {
 		return 1
 	}
 
+	var stdoutWriter io.Writer
+	if c.fileHandle == "" || c.fileHandle == "-" {
+		stdoutWriter = os.Stdout
+	} else {
+		// TODO: Handle case where file already exists and confirm that writing it is okay
+		file, err := os.Create(c.fileHandle)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to create output file: %s", err.Error()))
+			return 1
+		}
+		defer file.Close()
+		stdoutWriter = file
+	}
+
 	err = container.Execute(c.Context, container.ExecuteInput{
 		Name:         containerName,
 		CommandName:  "export",
 		ConfigOutput: config,
+		StdOutWriter: stdoutWriter,
 		Trace:        c.trace,
 	})
 	if err != nil {
