@@ -58,11 +58,16 @@ func Enter(ctx context.Context, input EnterInput) error {
 		stderrWriter = input.StdErrWriter
 	}
 
+	env := []string{}
+	if input.Trace {
+		env = append(env, "TRACE=1")
+	}
 
 	args = append(args, command...)
 	cmd := execute.ExecTask{
 		Command:      "docker",
 		Args:         args,
+		Env:          env,
 		StdOutWriter: stdoutWriter,
 		StdErrWriter: stderrWriter,
 		Stdin:        os.Stdin,
