@@ -3,6 +3,8 @@ package volume
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/alexellis/go-execute/v2"
 )
@@ -27,7 +29,9 @@ func Exists(ctx context.Context, input ExistsInput) (bool, error) {
 		StreamStdio: false,
 	}
 
-	cmd.PrintCommand = input.Trace
+	if input.Trace {
+		fmt.Fprintln(os.Stderr, "exec: ", cmd.Command, strings.Join(cmd.Args, " "))
+	}
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return false, fmt.Errorf("check for volume existence failed: %w", err)

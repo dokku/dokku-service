@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/alexellis/go-execute/v2"
 	"golang.org/x/term"
@@ -49,7 +50,9 @@ func Enter(ctx context.Context, input EnterInput) error {
 		Stdin:       os.Stdin,
 	}
 
-	cmd.PrintCommand = input.Trace
+	if input.Trace {
+		fmt.Fprintln(os.Stderr, "exec: ", cmd.Command, strings.Join(cmd.Args, " "))
+	}
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("exec into container failed: %w", err)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/alexellis/go-execute/v2"
@@ -77,7 +78,9 @@ func Create(ctx context.Context, input CreateInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = input.Trace
+	if input.Trace {
+		fmt.Fprintln(os.Stderr, "exec: ", cmd.Command, strings.Join(cmd.Args, " "))
+	}
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("container create for service failed: %w", err)

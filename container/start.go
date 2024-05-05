@@ -5,6 +5,7 @@ import (
 	"dokku-service/logstreamer"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/alexellis/go-execute/v2"
@@ -36,7 +37,9 @@ func Start(ctx context.Context, input StartInput) error {
 		}),
 	}
 
-	cmd.PrintCommand = input.Trace
+	if input.Trace {
+		fmt.Fprintln(os.Stderr, "exec: ", cmd.Command, strings.Join(cmd.Args, " "))
+	}
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("container start for service failed: %w", err)

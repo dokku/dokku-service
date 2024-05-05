@@ -73,7 +73,9 @@ func Connect(ctx context.Context, input ConnectInput) error {
 		Stdin:       os.Stdin,
 	}
 
-	cmd.PrintCommand = input.Trace
+	if input.Trace {
+		fmt.Fprintln(os.Stderr, "exec: ", cmd.Command, strings.Join(cmd.Args, " "))
+	}
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to execute connect command: %w", err)

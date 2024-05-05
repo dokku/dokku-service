@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/alexellis/go-execute/v2"
@@ -102,7 +104,9 @@ func _dockerlisteningCheck(ctx context.Context, input ListeningCheckInput, port 
 		StreamStdio: false,
 	}
 
-	cmd.PrintCommand = input.Trace
+	if input.Trace {
+		fmt.Fprintln(os.Stderr, "exec: ", cmd.Command, strings.Join(cmd.Args, " "))
+	}
 	result, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("error running dokku/wait on port: %d: %w", port, err)

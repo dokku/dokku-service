@@ -3,6 +3,8 @@ package network
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/alexellis/go-execute/v2"
 )
@@ -35,7 +37,9 @@ func Connect(ctx context.Context, input ConnectInput) error {
 		StreamStdio: false,
 	}
 
-	cmd.PrintCommand = input.Trace
+	if input.Trace {
+		fmt.Fprintln(os.Stderr, "exec: ", cmd.Command, strings.Join(cmd.Args, " "))
+	}
 	res, err := cmd.Execute(ctx)
 	if err != nil {
 		return fmt.Errorf("network connect failed: %w", err)
