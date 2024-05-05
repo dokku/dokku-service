@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"dokku-service/argument"
 	"dokku-service/registry"
 	"dokku-service/template"
 	"encoding/json"
@@ -36,7 +37,7 @@ type ConfigOutput struct {
 // RunConfig represents the configuration for running a service
 type RunConfig struct {
 	// Arguments are the arguments to pass to the service
-	Arguments map[string]string `json:"arguments"`
+	Arguments map[string]argument.Argument `json:"arguments"`
 
 	// ContainerCreateFlags are the flags to pass to the container create command
 	ContainerCreateFlags []string `json:"container_create_flags"`
@@ -52,6 +53,12 @@ type RunConfig struct {
 
 	// ImageBuildFlags are the flags to pass to the image build command
 	ImageBuildFlags []string `json:"image_build_flags"`
+
+	// PostCreateNetworks are the networks to create after the service is created
+	PostCreateNetworks []string `json:"post_create_networks"`
+
+	// PostStartNetworks are the networks to create after the service is started
+	PostStartNetworks []string `json:"post_start_networks"`
 
 	// ServiceRoot is the root directory for the service
 	ServiceRoot string `json:"service_root"`

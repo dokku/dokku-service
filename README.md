@@ -49,7 +49,7 @@ Status:
 - [ ] service-promote
 - [ ] service-restart
 - [ ] service-set
-- [ ] service-start
+- [x] service-start
 - [x] service-stop
 - [ ] service-unexpose
 - [ ] service-unlink

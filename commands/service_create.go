@@ -299,7 +299,7 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 	configFile := fmt.Sprintf("%s/config.json", serviceRoot)
 	createConfig := service.ConfigOutput{
 		Config: service.RunConfig{
-			Arguments:            c.arguments,
+			Arguments:            containerArgs,
 			ContainerCreateFlags: c.containerCreateFlags,
 			DataRoot:             c.dataRoot,
 			EnvironmentVariables: envConfig,
@@ -307,9 +307,11 @@ func (c *ServiceCreateCommand) Run(args []string) int {
 				Name: c.imageName,
 				Tag:  c.imageTag,
 			},
-			ImageBuildFlags: c.imageBuildFlags,
-			ServiceRoot:     serviceRoot,
-			UseVolumes:      c.useVolumes,
+			ImageBuildFlags:    c.imageBuildFlags,
+			PostCreateNetworks: c.postCreateNetwork,
+			PostStartNetworks:  c.postStartNetwork,
+			ServiceRoot:        serviceRoot,
+			UseVolumes:         c.useVolumes,
 		},
 		Template: serviceTemplate,
 	}
