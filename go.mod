@@ -9,7 +9,7 @@ require (
 	github.com/alexellis/go-execute/v2 v2.2.1
 	github.com/asottile/dockerfile v3.1.0+incompatible
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/docker/docker v26.0.2+incompatible
+	github.com/docker/docker v27.0.0+incompatible
 	github.com/gobuffalo/flect v1.0.2
 	github.com/gosimple/slug v1.14.0
 	github.com/josegonzalez/cli-skeleton v0.16.1
