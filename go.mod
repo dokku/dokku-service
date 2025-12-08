@@ -11,7 +11,7 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/docker/docker v27.0.3+incompatible
 	github.com/gobuffalo/flect v1.0.2
-	github.com/gosimple/slug v1.14.0
+	github.com/gosimple/slug v1.15.0
 	github.com/josegonzalez/cli-skeleton v0.16.1
 	github.com/mitchellh/cli v1.1.5
 	github.com/moby/moby v27.0.3+incompatible
