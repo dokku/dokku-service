@@ -14,7 +14,7 @@ require (
 	github.com/mitchellh/cli v1.1.5
 	github.com/moby/moby v28.5.2+incompatible
 	github.com/posener/complete v1.2.3
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.10
 	golang.org/x/sync v0.12.0
 	golang.org/x/term v0.32.0
 	mvdan.cc/sh/v3 v3.12.0
